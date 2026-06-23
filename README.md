@@ -4,37 +4,38 @@
 
 ### OPPO · Realme · OnePlus Battery Backup Improvement LSPosed Module
 
-**ColorOS · OxygenOS · Realme UI · LSPosed · SayanthRock**
+**Battery Backup · Battery Health · Phone Performance Level · GitHub APK Release Automation**
 
-[![Battery-Rock](https://img.shields.io/badge/Battery--Rock-v1.0.2-818CF8?style=for-the-badge&logo=android&logoColor=white)](https://github.com/SayanthRock/Battery-Rock)
+[![Battery-Rock](https://img.shields.io/badge/Battery--Rock-v1.0.3-818CF8?style=for-the-badge&logo=android&logoColor=white)](https://github.com/SayanthRock/Battery-Rock)
 [![LSPosed](https://img.shields.io/badge/LSPosed-Module-4F46E5?style=for-the-badge&logo=android)](https://github.com/LSPosed/LSPosed)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Android](https://img.shields.io/badge/Android-12%2B-22C55E?style=for-the-badge&logo=android)](https://developer.android.com/)
 
-**Battery-Rock is a SayanthRock LSPosed module designed to reduce common OPPO, Realme, and OnePlus background drain patterns through scoped Java-layer hooks.**
+**Battery-Rock is a SayanthRock LSPosed module for OPPO, Realme, and OnePlus devices. It targets common background drain patterns and now includes a live battery health and phone performance dashboard.**
 
 </div>
 
 ---
 
-## ✅ Latest Update, v1.0.2
+## ✅ Latest Update, v1.0.3
 
-This update adds a fully automated public GitHub release system for APK builds.
+This update improves the app dashboard and APK release flow.
 
 | Area | Status |
 |---|---|
+| Battery backup improvement | Enabled |
+| Battery health dashboard | Added |
+| Phone performance level | Added |
+| APK version | `1.0.3` |
+| Version code | `4` |
 | Repository visibility | Public |
 | APK build workflow | Fully automated |
-| Automatic tag creation | Enabled |
-| Gradle version detection | Enabled |
-| Release notes from commits | Enabled |
 | GitHub Release upload | Enabled |
-| Release APK collection | Enabled |
+| Duplicate release workflow | Removed |
 | SHA256 checksum generation | Enabled |
 | APK metadata file | Enabled |
 | APK signature verification | Enabled in CI |
 | Diagnostics artifact | Enabled |
-| App version | `1.0.2` |
 
 ---
 
@@ -51,6 +52,18 @@ It targets common battery-drain sources such as:
 - Selected analytics provider writes
 - Unnecessary service activity inside scoped packages
 
+The app dashboard now also shows:
+
+- Battery percentage
+- Charging state
+- Battery health
+- Battery temperature
+- Voltage
+- Power source
+- Estimated capacity when Android exposes the data
+- Phone performance level
+- Android version and app memory class
+
 Battery behavior depends on ROM version, installed apps, signal strength, kernel behavior, and LSPosed scope selection. Test on your own device before daily use.
 
 ---
@@ -60,33 +73,36 @@ Battery behavior depends on ROM version, installed apps, signal strength, kernel
 | Area | Battery-Rock Action |
 |---|---|
 | LSPosed module | Java-layer hooks, no direct `/system` modification |
+| Battery backup | Reduces selected background work, wakeups, and drain patterns |
+| Battery health | Shows Android battery health, level, temperature, power source, and capacity estimate |
+| Phone performance level | Calculates a clear status from CPU cores, Android API, low-RAM state, and memory class |
 | JobScheduler | Blocks or reduces selected background job scheduling |
 | AlarmManager | Throttles frequent telemetry alarms |
 | Wakelocks | Caps oversized or indefinite wakelock requests |
 | Telemetry packages | Reduces selected service, network, and analytics behavior |
-| Compose UI | Dark, clean module status and option screen |
-| GitHub Actions | Builds APK, creates release notes, and uploads public releases automatically |
+| Compose UI | Dark, clean module dashboard with battery and performance cards |
+| GitHub Actions | Builds APK, creates release notes, uploads artifact, and publishes GitHub Release automatically |
 
 ---
 
 ## 🚀 Fully Automated APK Build and Public Upload
 
-The workflow file is located here:
+The main workflow file is:
 
 ```text
 .github/workflows/build-release.yml
 ```
 
-The APK workflow runs when:
+The workflow runs when:
 
 - Code is pushed to the `main` branch
-- A version tag like `v1.0.2` is pushed
+- A version tag like `v1.0.3` is pushed
 - The workflow is started manually from GitHub Actions
 
 For normal pushes to `main`, the workflow automatically creates a tag like:
 
 ```text
-v1.0.2-build.123
+v1.0.3-build.123
 ```
 
 The workflow reads the app version directly from:
@@ -123,6 +139,7 @@ Battery-Rock/
 │       ├── assets/xposed_init
 │       ├── java/dev/sayanthrock/batteryrock/
 │       │   ├── BatteryRockInit.kt
+│       │   ├── DeviceStatusReader.kt
 │       │   ├── MainActivity.kt
 │       │   ├── hooks/
 │       │   │   ├── FrameworkHook.kt
@@ -143,10 +160,11 @@ Battery-Rock/
 | File | Purpose |
 |---|---|
 | `BatteryRockInit.kt` | LSPosed entry point loaded from `assets/xposed_init` |
+| `DeviceStatusReader.kt` | Reads safe Android battery health and device performance status for the dashboard |
+| `MainActivity.kt` | Compose UI with module status, battery health, performance level, and package list |
 | `FrameworkHook.kt` | Framework-level hooks for JobScheduler and AlarmManager behavior |
 | `TelemetryKiller.kt` | Hooks selected telemetry services, jobs, network calls, and analytics writes |
 | `WakelockGuard.kt` | Caps long or indefinite wakelocks |
-| `MainActivity.kt` | Compose UI with module status, improvement cards, and package list |
 | `AndroidManifest.xml` | LSPosed module metadata and launcher activity |
 | `scope.xml` | Recommended LSPosed scope packages |
 | `build-release.yml` | Automatic APK build, artifact upload, release notes, and GitHub Release publishing |
@@ -185,13 +203,19 @@ For local Android Studio or terminal builds, place the Xposed API jar here:
 app/libs/api-82.jar
 ```
 
-Then build:
+If a Gradle wrapper exists, build with:
 
 ```bash
 ./gradlew :app:assembleRelease
 ```
 
-If this repository is built from GitHub Actions, the workflow prepares the Xposed API dependency automatically.
+If this repository has no Gradle wrapper in your checkout, install Gradle and build with:
+
+```bash
+gradle :app:assembleRelease
+```
+
+GitHub Actions prepares the Xposed API dependency automatically for CI builds.
 
 ---
 
@@ -215,6 +239,8 @@ After reboot, check:
 - Battery-Rock appears enabled in LSPosed.
 - The module app opens without crashing.
 - The module status card is visible.
+- Battery Health card shows live status.
+- Phone Performance Level card shows a calculated level.
 - LSPosed logs show Battery-Rock hook messages.
 - Calls, messages, Wi-Fi, Bluetooth, charging, and notifications still work.
 - Idle drain is compared before and after at least one sleep-cycle test.
@@ -264,6 +290,7 @@ Battery-Rock is a root and LSPosed module. Use it only on devices you own and co
 | APK signature check fails | Rebuild from GitHub Actions and inspect diagnostics artifact |
 | Module does not activate | Enable the module in LSPosed, select scope, then reboot |
 | Hooks do not appear in logs | Confirm scope packages exist on your ROM |
+| Battery Health shows unknown values | Some ROMs hide capacity or voltage values from normal apps |
 | System feature breaks | Remove that package from scope, disable the module, then reboot |
 
 ---
@@ -289,7 +316,7 @@ Battery-Rock is a root and LSPosed module. Use it only on devices you own and co
 | Project | Battery-Rock |
 | Type | Android LSPosed battery backup improvement module |
 | UI Style | Dark, clean spacing, modern Android feel |
-| Focus | OPPO, Realme, and OnePlus battery backup and background behavior |
+| Focus | OPPO, Realme, and OnePlus battery backup, battery health, and performance |
 
 ---
 
