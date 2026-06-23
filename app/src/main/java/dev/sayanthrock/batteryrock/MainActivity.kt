@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,6 +57,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun BatteryRockScreen(isActive: Boolean) {
+    val context = LocalContext.current
+    val batteryHealth = remember { DeviceStatusReader.readBatteryHealth(context) }
+    val performanceLevel = remember { DeviceStatusReader.readPerformanceLevel(context) }
+
     var batteryMode by remember { mutableStateOf("Balanced") }
     var performanceMode by remember { mutableStateOf("Standard") }
     var refreshRateMode by remember { mutableStateOf("Auto-select") }
@@ -85,6 +89,9 @@ fun BatteryRockScreen(isActive: Boolean) {
         ) {
             item { HeaderCard() }
             item { StatusCard(isActive) }
+
+            item { SectionLabel("Device Battery Health") }
+            item { DeviceDashboardCard(batteryHealth, performanceLevel) }
 
             item { SectionLabel("Improvement Center") }
             items(IMPROVEMENT_ITEMS) { ImprovementCard(it) }
@@ -167,7 +174,7 @@ fun HeaderCard() {
                     fontSize = 13.sp
                 )
                 Text(
-                    text = "Battery backup and performance LSPosed module",
+                    text = "Battery backup, battery health and performance module",
                     color = Color(0xFF818CF8),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
@@ -212,6 +219,105 @@ fun StatusCard(isActive: Boolean) {
     }
 }
 
+@Composable
+fun DeviceDashboardCard(
+    batteryHealth: BatteryHealthSnapshot,
+    performanceLevel: DevicePerformanceSnapshot,
+) {
+    GlassCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BadgeBox(text = "LIVE", color = Color(0xFF22C55E))
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text("Live Device Status", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Battery health, charging state, temperature and phone performance level.",
+                    color = Color(0xFF9CA3AF),
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp
+                )
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MetricTile(
+                label = "Battery",
+                value = if (batteryHealth.levelPercent >= 0) "${batteryHealth.levelPercent}%" else "Unknown",
+                detail = batteryHealth.statusLabel,
+                accent = Color(0xFF22C55E),
+                modifier = Modifier.weight(1f)
+            )
+            MetricTile(
+                label = "Health",
+                value = batteryHealth.healthLabel,
+                detail = batteryHealth.summary,
+                accent = Color(0xFF818CF8),
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MetricTile(
+                label = "Temp",
+                value = batteryHealth.temperatureC,
+                detail = "${batteryHealth.powerSource} · ${batteryHealth.capacityEstimate}",
+                accent = Color(0xFFF59E0B),
+                modifier = Modifier.weight(1f)
+            )
+            MetricTile(
+                label = "Performance",
+                value = performanceLevel.levelLabel,
+                detail = "${performanceLevel.score}/100 · ${performanceLevel.cores} cores",
+                accent = Color(0xFF38BDF8),
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = performanceLevel.summary,
+            color = Color(0xFF9CA3AF),
+            fontSize = 12.sp,
+            lineHeight = 17.sp
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            text = "${performanceLevel.androidVersion} · App memory class ${performanceLevel.memoryClassMb} MB",
+            color = Color(0xFF6B7280),
+            fontSize = 11.sp,
+            lineHeight = 16.sp
+        )
+    }
+}
+
+@Composable
+fun MetricTile(
+    label: String,
+    value: String,
+    detail: String,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(accent.copy(alpha = 0.10f))
+            .border(1.dp, accent.copy(alpha = 0.20f), RoundedCornerShape(14.dp))
+            .padding(12.dp)
+    ) {
+        Text(label, color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        Text(value, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(3.dp))
+        Text(detail, color = Color(0xFF9CA3AF), fontSize = 11.sp, lineHeight = 15.sp)
+    }
+}
+
 data class ImprovementItem(val badge: String, val title: String, val detail: String)
 
 val IMPROVEMENT_ITEMS = listOf(
@@ -221,9 +327,14 @@ val IMPROVEMENT_ITEMS = listOf(
         "Targets idle drain, repeated wakeups, background activity, and long wakelocks."
     ),
     ImprovementItem(
+        "HLT",
+        "Battery Health Awareness",
+        "Shows battery health, level, charging state, temperature, voltage, and estimated capacity."
+    ),
+    ImprovementItem(
         "CPU",
-        "Mobile Performance Improvement",
-        "Keeps foreground use smoother by reducing unnecessary background pressure where safe."
+        "Phone Performance Level",
+        "Calculates a clear performance level from CPU cores, Android version, and app memory class."
     ),
     ImprovementItem(
         "OEM",
