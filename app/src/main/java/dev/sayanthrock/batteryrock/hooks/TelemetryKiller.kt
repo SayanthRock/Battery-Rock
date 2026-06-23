@@ -4,6 +4,7 @@ import android.app.Service
 import android.content.Intent
 import android.net.Uri
 import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XC_MethodHook.MethodHookParam
 import de.robv.android.xposed.XC_MethodReplacement
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
@@ -11,25 +12,8 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 import dev.sayanthrock.batteryrock.BatteryRockInit
 
 /**
- * TelemetryKiller — loaded inside each OPLUS **telemetry / drain package** process.
- *
- * Hook surfaces
- * ─────────────
- * • [Service.onStartCommand] → returns [Service.START_NOT_STICKY] immediately.
- *   Services are technically started but perform no work and are GC-able quickly.
- * • [JobScheduler.schedule]  → returns RESULT_FAILURE inside the app process
- *   (belt-and-suspenders alongside [FrameworkHook]).
- * • [java.net.URL.openConnection] → throws [java.io.IOException], cutting off
- *   outbound telemetry/HTTP traffic.
- * • [android.content.ContentResolver.insert] → drops telemetry inserts into
- *   OPLUS content providers.
- *
- * Design notes
- * ────────────
- * We deliberately **do not** hook [android.app.Service.onCreate] / [android.app.Application.onCreate]
- * with a full replacement — doing so would leave the object in an uninitialised state
- * and cause [NullPointerException] chains. Blocking [onStartCommand] is sufficient
- * to prevent any useful work.
+ * TelemetryKiller — loaded inside selected OPLUS, Realme, and OnePlus
+ * telemetry or drain package processes.
  */
 object TelemetryKiller {
 
@@ -45,10 +29,6 @@ object TelemetryKiller {
 
     // ─── Service ──────────────────────────────────────────────────────────────
 
-    /**
-     * Intercepts [Service.onStartCommand] so the service returns immediately
-     * without executing its payload.
-     */
     private fun blockServiceStarts(pkg: String, classLoader: ClassLoader) {
         tryHook("Service.onStartCommand ($pkg)") {
             XposedHelpers.findAndHookMethod(
@@ -62,7 +42,7 @@ object TelemetryKiller {
                     override fun replaceHookedMethod(param: MethodHookParam): Any {
                         XposedBridge.log(
                             "$TAG: Blocked Service.onStartCommand " +
-                                    "[${param.thisObject::class.java.simpleName}] in $pkg"
+                                "[${param.thisObject::class.java.simpleName}] in $pkg"
                         )
                         return Service.START_NOT_STICKY
                     }
@@ -73,10 +53,6 @@ object TelemetryKiller {
 
     // ─── JobScheduler ─────────────────────────────────────────────────────────
 
-    /**
-     * Blocks the app-side [JobScheduler] proxy so no background jobs are scheduled.
-     * Works in tandem with [FrameworkHook] which blocks at the system_server level.
-     */
     private fun blockJobScheduling(pkg: String, classLoader: ClassLoader) {
         tryHook("JobSchedulerImpl.schedule ($pkg)") {
             XposedHelpers.findAndHookMethod(
@@ -96,15 +72,7 @@ object TelemetryKiller {
 
     // ─── Network Access ───────────────────────────────────────────────────────
 
-    /**
-     * Blocks all HTTP/HTTPS connections originating from this process by
-     * throwing an [IOException] from [java.net.URL.openConnection].
-     *
-     * This cuts telemetry beacons, analytics pings, crash-log uploads, etc.
-     * without needing a firewall rule.
-     */
     private fun blockNetworkAccess(pkg: String, classLoader: ClassLoader) {
-        // java.net.URL – standard JVM HTTP
         tryHook("URL.openConnection ($pkg)") {
             XposedHelpers.findAndHookMethod(
                 "java.net.URL",
@@ -119,7 +87,6 @@ object TelemetryKiller {
             )
         }
 
-        // OkHttp (commonly bundled in OPLUS apps) – hook newCall entry point
         tryHook("OkHttpClient.newCall ($pkg)") {
             XposedHelpers.findAndHookMethod(
                 "okhttp3.OkHttpClient",
@@ -138,11 +105,6 @@ object TelemetryKiller {
 
     // ─── ContentProvider ──────────────────────────────────────────────────────
 
-    /**
-     * Drops [ContentResolver.insert] calls targeting OPLUS telemetry providers.
-     * Telemetry data is often funnelled through content providers before being
-     * batched and transmitted.
-     */
     private fun blockContentProviderInserts(pkg: String, classLoader: ClassLoader) {
         tryHook("ContentResolver.insert ($pkg)") {
             XposedHelpers.findAndHookMethod(
@@ -166,10 +128,10 @@ object TelemetryKiller {
     }
 
     private fun isTelemetryUri(host: String): Boolean =
-        host.contains("onetrace", ignoreCase = true)
-                || host.contains("appsense", ignoreCase = true)
-                || host.contains("oplus.log", ignoreCase = true)
-                || host.contains("powermonitor", ignoreCase = true)
+        host.contains("onetrace", ignoreCase = true) ||
+            host.contains("appsense", ignoreCase = true) ||
+            host.contains("oplus.log", ignoreCase = true) ||
+            host.contains("powermonitor", ignoreCase = true)
 
     // ─── Utility ──────────────────────────────────────────────────────────────
 
@@ -177,8 +139,7 @@ object TelemetryKiller {
         try {
             block()
         } catch (t: Throwable) {
-            // Silently skip – class/method may not exist in this ROM version
-            XposedBridge.log("$TAG: ✗ $label – ${t.javaClass.simpleName}: ${t.message}")
+            XposedBridge.log("$TAG: ✗ $label - ${t.javaClass.simpleName}: ${t.message}")
         }
     }
 }
