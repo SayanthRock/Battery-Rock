@@ -1,0 +1,143 @@
+name: Build APK and Auto Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: "Optional release tag, example: v1.0.0"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: Battery-Rock
+
+jobs:
+  build-release:
+    name: Build and upload release
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+
+      - name: Resolve release tag
+        id: version
+        shell: bash
+        run: |
+          INPUT_TAG="${{ github.event.inputs.release_name || '' }}"
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME}"
+          elif [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG="v$(date -u +'%Y.%m.%d')-${GITHUB_RUN_NUMBER}"
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "release_name=${APP_NAME} ${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare Gradle command
+        id: gradle_cmd
+        shell: bash
+        run: |
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            echo "cmd=./gradlew" >> "$GITHUB_OUTPUT"
+          elif [ -f "./settings.gradle" ] || [ -f "./settings.gradle.kts" ] || [ -f "./build.gradle" ] || [ -f "./build.gradle.kts" ]; then
+            echo "cmd=gradle" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::No Android/Gradle project was found. Add settings.gradle(.kts), build.gradle(.kts), app/build.gradle(.kts), and Android source files before building an APK."
+            exit 1
+          fi
+
+      - name: Prepare Android local.properties
+        shell: bash
+        run: |
+          echo "sdk.dir=${ANDROID_HOME}" > local.properties
+
+      - name: Build release APK
+        shell: bash
+        run: |
+          ${{ steps.gradle_cmd.outputs.cmd }} clean assembleRelease --stacktrace
+
+      - name: Collect APK files
+        id: collect
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          find . -type f -path "*/build/outputs/apk/*/*.apk" -print -exec cp {} artifacts/ \;
+
+          if ! compgen -G "artifacts/*.apk" > /dev/null; then
+            echo "::error::Build completed, but no APK was found under build/outputs/apk."
+            exit 1
+          fi
+
+          cd artifacts
+          for file in *.apk; do
+            clean_name="${APP_NAME}-${{ steps.version.outputs.tag }}-${file}"
+            mv "$file" "$clean_name"
+          done
+          sha256sum *.apk > SHA256SUMS.txt
+
+      - name: Create release notes
+        shell: bash
+        run: |
+          cat > RELEASE_NOTES.md <<'EOF'
+          # Battery-Rock Release
+
+          Automated GitHub Actions build for the Battery-Rock LSPosed module.
+
+          ## Included
+
+          - APK artifact built from the latest repository source
+          - SHA256 checksum file
+          - Automatic GitHub Release upload
+
+          ## Safety
+
+          Battery-Rock is a root/LSPosed module. Install only on devices you own and control. Test on your ROM first, then enable scopes carefully in LSPosed Manager.
+          EOF
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-${{ steps.version.outputs.tag }}
+          path: artifacts/*
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.release_name }}
+          body_path: RELEASE_NOTES.md
+          files: artifacts/*
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
