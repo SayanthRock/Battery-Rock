@@ -85,6 +85,22 @@ jobs:
         run: |
           echo "sdk.dir=${ANDROID_HOME}" > local.properties
 
+      - name: Prepare diagnostics folder
+        shell: bash
+        run: |
+          mkdir -p diagnostics
+          {
+            echo "Repository: $GITHUB_REPOSITORY"
+            echo "Run ID: $GITHUB_RUN_ID"
+            echo "Run Number: $GITHUB_RUN_NUMBER"
+            echo "Ref: $GITHUB_REF"
+            echo "SHA: $GITHUB_SHA"
+            echo "Java version:"
+            java -version 2>&1
+            echo "Gradle command: ${{ steps.gradle_cmd.outputs.cmd }}"
+            echo "Android SDK: ${ANDROID_HOME}"
+          } > diagnostics/environment.txt
+
       - name: Fix CI dependency pins
         shell: bash
         run: |
@@ -95,7 +111,7 @@ jobs:
           text = text.replace('composeBom = "2024.10.01"', 'composeBom = "2024.10.00"')
           path.write_text(text)
           PY
-          cat gradle/libs.versions.toml
+          cat gradle/libs.versions.toml | tee diagnostics/libs.versions.toml
 
       - name: Prepare Xposed API
         shell: bash
@@ -200,7 +216,28 @@ jobs:
       - name: Build release APK
         shell: bash
         run: |
-          ${{ steps.gradle_cmd.outputs.cmd }} --no-daemon clean :app:assembleRelease --stacktrace --info
+          set -o pipefail
+          ${{ steps.gradle_cmd.outputs.cmd }} --no-daemon clean :app:assembleRelease --stacktrace --info 2>&1 | tee diagnostics/build-release-apk.log
+
+      - name: Capture failure diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          mkdir -p diagnostics
+          find . -path "*/build/reports/*" -type f -print > diagnostics/report-files.txt || true
+          find . -path "*/build/outputs/logs/*" -type f -print > diagnostics/output-log-files.txt || true
+          find . -name "*.log" -type f -print > diagnostics/all-log-files.txt || true
+          if [ -f diagnostics/build-release-apk.log ]; then
+            grep -n -E "FAILURE:|What went wrong|Execution failed|Could not|error:|ERROR:|Exception|Compilation error|Unresolved reference" diagnostics/build-release-apk.log > diagnostics/important-errors.txt || true
+          fi
+
+      - name: Upload diagnostics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-diagnostics-${{ steps.version.outputs.tag }}
+          path: diagnostics/*
+          if-no-files-found: warn
 
       - name: Collect APK files
         id: collect
