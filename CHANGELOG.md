@@ -4,6 +4,23 @@ All notable Battery-Rock updates will be documented here.
 
 ---
 
+## v1.0.2
+
+### Automatic public release fixes
+
+- Confirmed the repository is public and ready for public APK release uploads.
+- Stabilized the Compose BOM pin for local and CI builds.
+- Bumped the APK version to `1.0.2` / versionCode `3`.
+- Made the release APK installable from GitHub Actions by applying a signing config to the release build.
+- Hardened the GitHub Actions workflow with concurrency control, better tag validation, APK signature verification, SHA256 checksums, diagnostics artifacts, and automatic GitHub Release publishing.
+- Kept Java 17, Android SDK 35, AGP 8.7.3, Kotlin 2.0.21, and Gradle 8.9 aligned for stable CI builds.
+
+### Notes
+
+This release is focused on fixing build, upload, and public release automation problems. Battery-Rock is still a root and LSPosed module, so users should test scope packages carefully on their own OPPO, Realme, or OnePlus ROM.
+
+---
+
 ## v1.0.1
 
 ### APK build fixes
