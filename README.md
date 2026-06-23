@@ -19,15 +19,19 @@
 
 ## ✅ Latest Update, v1.0.2
 
-This update focuses on public GitHub release automation and APK build stability.
+This update adds a fully automated public GitHub release system for APK builds.
 
 | Area | Status |
 |---|---|
 | Repository visibility | Public |
-| APK build workflow | Enabled |
-| Automatic GitHub Release upload | Enabled |
+| APK build workflow | Fully automated |
+| Automatic tag creation | Enabled |
+| Gradle version detection | Enabled |
+| Release notes from commits | Enabled |
+| GitHub Release upload | Enabled |
 | Release APK collection | Enabled |
 | SHA256 checksum generation | Enabled |
+| APK metadata file | Enabled |
 | APK signature verification | Enabled in CI |
 | Diagnostics artifact | Enabled |
 | App version | `1.0.2` |
@@ -61,11 +65,11 @@ Battery behavior depends on ROM version, installed apps, signal strength, kernel
 | Wakelocks | Caps oversized or indefinite wakelock requests |
 | Telemetry packages | Reduces selected service, network, and analytics behavior |
 | Compose UI | Dark, clean module status and option screen |
-| GitHub Actions | Builds APK and uploads public release automatically |
+| GitHub Actions | Builds APK, creates release notes, and uploads public releases automatically |
 
 ---
 
-## 🚀 Automatic APK Build and Public Upload
+## 🚀 Fully Automated APK Build and Public Upload
 
 The workflow file is located here:
 
@@ -79,17 +83,27 @@ The APK workflow runs when:
 - A version tag like `v1.0.2` is pushed
 - The workflow is started manually from GitHub Actions
 
-The workflow prepares:
+For normal pushes to `main`, the workflow automatically creates a tag like:
 
-- Android SDK 35
-- Java 17
-- Gradle 8.9
-- Xposed API compile dependency
-- Release APK build
-- APK signature verification
-- SHA256 checksum file
-- GitHub Actions artifact
-- Public GitHub Release upload
+```text
+v1.0.2-build.123
+```
+
+The workflow reads the app version directly from:
+
+```text
+app/build.gradle.kts
+```
+
+The workflow prepares and uploads:
+
+- Release APK
+- `SHA256SUMS.txt`
+- `APK_INFO.txt`
+- Automatic release notes from recent commits
+- GitHub Actions APK artifact
+- GitHub Actions diagnostics artifact
+- Public GitHub Release with APK files attached
 
 ---
 
@@ -135,7 +149,7 @@ Battery-Rock/
 | `MainActivity.kt` | Compose UI with module status, improvement cards, and package list |
 | `AndroidManifest.xml` | LSPosed module metadata and launcher activity |
 | `scope.xml` | Recommended LSPosed scope packages |
-| `build-release.yml` | Automatic APK build, artifact upload, and GitHub Release publishing |
+| `build-release.yml` | Automatic APK build, artifact upload, release notes, and GitHub Release publishing |
 
 ---
 
