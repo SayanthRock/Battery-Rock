@@ -6,32 +6,33 @@
 
 **Battery Backup · Battery Health · Phone Performance Level · GitHub APK Release Automation**
 
-[![Battery-Rock](https://img.shields.io/badge/Battery--Rock-v1.0.3-818CF8?style=for-the-badge&logo=android&logoColor=white)](https://github.com/SayanthRock/Battery-Rock)
+[![Battery-Rock](https://img.shields.io/badge/Battery--Rock-v1.0.4-818CF8?style=for-the-badge&logo=android&logoColor=white)](https://github.com/SayanthRock/Battery-Rock)
 [![LSPosed](https://img.shields.io/badge/LSPosed-Module-4F46E5?style=for-the-badge&logo=android)](https://github.com/LSPosed/LSPosed)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Android](https://img.shields.io/badge/Android-12%2B-22C55E?style=for-the-badge&logo=android)](https://developer.android.com/)
 
-**Battery-Rock is a SayanthRock LSPosed module for OPPO, Realme, and OnePlus devices. It targets common background drain patterns and now includes a live battery health and phone performance dashboard.**
+**Battery-Rock is a SayanthRock LSPosed module for OPPO, Realme, and OnePlus devices. It targets common background drain patterns and includes a live battery health and phone performance dashboard.**
 
 </div>
 
 ---
 
-## ✅ Latest Update, v1.0.3
+## ✅ Latest Update, v1.0.4
 
-This update improves the app dashboard and APK release flow.
+This update fixes APK compatibility and keeps the public GitHub Release flow active.
 
 | Area | Status |
 |---|---|
 | Battery backup improvement | Enabled |
 | Battery health dashboard | Added |
 | Phone performance level | Added |
-| APK version | `1.0.3` |
-| Version code | `4` |
+| APK compatibility fix | Added |
+| Android 12/13 battery source safety | Added |
+| APK version | `1.0.4` |
+| Version code | `5` |
 | Repository visibility | Public |
 | APK build workflow | Fully automated |
 | GitHub Release upload | Enabled |
-| Duplicate release workflow | Removed |
 | SHA256 checksum generation | Enabled |
 | APK metadata file | Enabled |
 | APK signature verification | Enabled in CI |
@@ -52,7 +53,7 @@ It targets common battery-drain sources such as:
 - Selected analytics provider writes
 - Unnecessary service activity inside scoped packages
 
-The app dashboard now also shows:
+The app dashboard shows:
 
 - Battery percentage
 - Charging state
@@ -96,13 +97,13 @@ The main workflow file is:
 The workflow runs when:
 
 - Code is pushed to the `main` branch
-- A version tag like `v1.0.3` is pushed
+- A version tag like `v1.0.4` is pushed
 - The workflow is started manually from GitHub Actions
 
 For normal pushes to `main`, the workflow automatically creates a tag like:
 
 ```text
-v1.0.3-build.123
+v1.0.4-build.123
 ```
 
 The workflow reads the app version directly from:
