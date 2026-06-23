@@ -12,8 +12,8 @@ android {
         applicationId = "dev.sayanthrock.batteryrock"
         minSdk = 31
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
     }
 
     buildTypes {
@@ -23,8 +23,8 @@ android {
         }
 
         release {
-            // Keep release build simple and stable for GitHub Actions.
-            // R8 can be re-enabled later after APK generation is confirmed.
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
             isMinifyEnabled = false
             isShrinkResources = false
             proguardFiles(
@@ -56,10 +56,8 @@ android {
 }
 
 dependencies {
-    // Xposed / LSPosed API is provided by the runtime environment.
     compileOnly(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
-    // AndroidX and Jetpack Compose UI.
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
