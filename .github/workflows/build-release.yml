@@ -182,7 +182,7 @@ jobs:
       - name: Build release APK
         shell: bash
         run: |
-          ${{ steps.gradle_cmd.outputs.cmd }} clean assembleRelease --stacktrace
+          ${{ steps.gradle_cmd.outputs.cmd }} --no-daemon clean :app:assembleRelease --stacktrace --info
 
       - name: Collect APK files
         id: collect
