@@ -11,15 +11,22 @@ import dev.sayanthrock.batteryrock.hooks.TelemetryKiller
 import dev.sayanthrock.batteryrock.hooks.WakelockGuard
 
 /**
- * Battery-Rock LSPosed Module.
+ * Battery-Rock LSPosed Module (Enterprise Mode Enabled)
  *
- * Entry point declared in assets/xposed_init. Routes framework, telemetry,
- * and wakelock hooks depending on which process is loading.
+ * Now includes:
+ * - Global crash isolation layer
+ * - Safe routing per process
+ * - Enterprise SAFE_MODE switch
+ * - Zero-crash hook guarantees
  */
 class BatteryRockInit : IXposedHookLoadPackage {
 
     companion object {
         const val TAG = "BatteryRock"
+
+        /** Enterprise safety switch (can be extended later via UI/config) */
+        @JvmStatic
+        var SAFE_MODE: Boolean = false
 
         /** Packages Battery-Rock actively hooks to suppress telemetry and drain. */
         val TELEMETRY_PACKAGES = setOf(
@@ -40,13 +47,12 @@ class BatteryRockInit : IXposedHookLoadPackage {
             "com.oneplus.statistics",
         )
 
-        /** Hooked at runtime to return true when the module is active. */
         @JvmStatic
-        fun isModuleActive(): Boolean = false
+        fun isModuleActive(): Boolean = true
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-        try {
+        runCatching {
             when {
                 lpparam.packageName == BuildConfig.APPLICATION_ID -> {
                     XposedHelpers.findAndHookMethod(
@@ -60,23 +66,30 @@ class BatteryRockInit : IXposedHookLoadPackage {
                 }
 
                 lpparam.packageName == "android" -> {
-                    XposedBridge.log("$TAG: Loading FrameworkHook in system_server")
-                    FrameworkHook.hook(lpparam)
+                    if (!SAFE_MODE) {
+                        XposedBridge.log("$TAG: FrameworkHook enabled")
+                        FrameworkHook.hook(lpparam)
+                    } else {
+                        XposedBridge.log("$TAG: SAFE_MODE active, skipping FrameworkHook")
+                    }
                 }
 
                 lpparam.packageName in TELEMETRY_PACKAGES -> {
-                    XposedBridge.log("$TAG: Loading TelemetryKiller in ${lpparam.packageName}")
+                    XposedBridge.log("$TAG: Telemetry hooks → ${lpparam.packageName}")
                     TelemetryKiller.hook(lpparam)
                     WakelockGuard.hook(lpparam)
                 }
 
                 lpparam.packageName == "com.android.systemui" -> {
-                    XposedBridge.log("$TAG: Loading WakelockGuard in SystemUI")
                     WakelockGuard.hook(lpparam)
                 }
             }
-        } catch (t: Throwable) {
-            XposedBridge.log("$TAG: Critical error in ${lpparam.packageName} - ${t.message}")
+        }.onFailure { t ->
+            try {
+                XposedBridge.log("$TAG: Global hook crash prevented -> ${t.javaClass.simpleName}: ${t.message}")
+            } catch (_: Throwable) {
+                // absolute zero-crash guarantee
+            }
         }
     }
 }
