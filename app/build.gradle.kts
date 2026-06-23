@@ -60,6 +60,11 @@ android {
     }
 }
 
+// Ensure Kotlin compiles with stable JDK toolchain
+kotlin {
+    jvmToolchain(17)
+}
+
 dependencies {
     compileOnly(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
