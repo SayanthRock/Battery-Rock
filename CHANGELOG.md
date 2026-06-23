@@ -6,13 +6,26 @@ All notable Battery-Rock updates will be documented here.
 
 ## v1.0.2
 
-### Automatic public release fixes
+### Fully automated GitHub release system
+
+- Added a zero-touch release flow for public APK upload.
+- The workflow now reads `versionName` and `versionCode` directly from `app/build.gradle.kts`.
+- Pushes to `main` automatically create a build tag like `v1.0.2-build.123`.
+- Version tags like `v1.0.2` still publish clean stable releases.
+- Manual workflow runs can still provide a custom release tag.
+- Release notes are generated automatically from recent Git commits.
+- APK files are renamed with the app name and release tag.
+- `SHA256SUMS.txt` and `APK_INFO.txt` are generated automatically.
+- APK signature verification runs before upload.
+- APK artifacts and diagnostics artifacts are uploaded to GitHub Actions.
+- Public GitHub Releases are published automatically with APK files attached.
+
+### APK build fixes
 
 - Confirmed the repository is public and ready for public APK release uploads.
 - Stabilized the Compose BOM pin for local and CI builds.
 - Bumped the APK version to `1.0.2` / versionCode `3`.
 - Made the release APK installable from GitHub Actions by applying a signing config to the release build.
-- Hardened the GitHub Actions workflow with concurrency control, better tag validation, APK signature verification, SHA256 checksums, diagnostics artifacts, and automatic GitHub Release publishing.
 - Kept Java 17, Android SDK 35, AGP 8.7.3, Kotlin 2.0.21, and Gradle 8.9 aligned for stable CI builds.
 
 ### Notes
