@@ -41,7 +41,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.10.2"
+          gradle-version: "8.9"
 
       - name: Resolve release tag
         id: version
@@ -78,6 +78,26 @@ jobs:
         shell: bash
         run: |
           echo "sdk.dir=${ANDROID_HOME}" > local.properties
+
+      - name: Prepare Xposed API
+        shell: bash
+        run: |
+          mkdir -p app/libs
+
+          if [ -f "app/libs/api-82.jar" ]; then
+            echo "api-82.jar already exists."
+            exit 0
+          fi
+
+          echo "Downloading Xposed API 82 for compileOnly build..."
+          curl -L --retry 3 --retry-delay 2 --fail \
+            -o app/libs/api-82.jar \
+            "https://github.com/rovo89/XposedBridge/releases/download/82/api-82.jar"
+
+          if [ ! -s "app/libs/api-82.jar" ]; then
+            echo "::error::app/libs/api-82.jar download failed or file is empty."
+            exit 1
+          fi
 
       - name: Build release APK
         shell: bash
