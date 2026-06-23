@@ -4,6 +4,30 @@ All notable Battery-Rock updates will be documented here.
 
 ---
 
+## v1.0.3
+
+### Battery backup improvement
+
+- Added a live Battery-Rock device dashboard for battery backup monitoring.
+- Added battery level, charging state, battery health, temperature, voltage, power source, and estimated capacity display.
+- Added safer battery-health guidance based on Android battery status values.
+- Added phone performance level calculation using CPU cores, Android API version, low-RAM status, and app memory class.
+- Added clearer UI cards for Battery Health and Phone Performance Level.
+- Updated the app title/subtitle to reflect battery backup, battery health, and performance improvement.
+
+### APK build and release fixes
+
+- Bumped the APK to `1.0.3` / versionCode `4`.
+- Removed the duplicate release workflow so APK publishing uses one main automated workflow.
+- Kept automatic GitHub Release creation and APK asset upload through `.github/workflows/build-release.yml`.
+- Kept SHA256 checksum, APK metadata, signature verification, and diagnostics artifact generation.
+
+### Notes
+
+This update improves the app dashboard and reduces APK automation confusion. Battery-Rock remains an LSPosed module, so users should enable only the recommended scopes and test on their own OPPO, Realme, or OnePlus ROM.
+
+---
+
 ## v1.0.2
 
 ### Fully automated GitHub release system
