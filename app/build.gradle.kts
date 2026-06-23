@@ -10,16 +10,23 @@ android {
 
     defaultConfig {
         applicationId = "dev.sayanthrock.batteryrock"
-        minSdk = 31          // Android 12 → ColorOS 12 / OxygenOS 12 minimum
+        minSdk = 31
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
     }
 
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
+
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Keep release build simple and stable for GitHub Actions.
+            // R8 can be re-enabled later after APK generation is confirmed.
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -33,12 +40,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     packaging {
@@ -49,16 +56,10 @@ android {
 }
 
 dependencies {
-    // ─── Xposed / LSPosed API ────────────────────────────────────────────────
-    // Option A (default): local JAR from app/libs/
-    //   Download api-82.jar from https://github.com/rovo89/XposedBridge/releases
-    //   and drop it in app/libs/
+    // Xposed / LSPosed API is provided by the runtime environment.
     compileOnly(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
-    // Option B (JitPack fallback – uncomment if you prefer no local JAR):
-    // compileOnly("com.github.rovo89.XposedBridge:api:82") { isTransitive = false }
-
-    // ─── AndroidX & Jetpack Compose ──────────────────────────────────────────
+    // AndroidX and Jetpack Compose UI.
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
