@@ -1,0 +1,18 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Signing keystore – never commit
+*.jks
+*.keystore
+
+# Xposed API jar – download separately
+app/libs/api-82.jar
+app/libs/*.jar
