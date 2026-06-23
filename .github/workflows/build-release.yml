@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       release_name:
-        description: "Optional release tag, example: v1.0.0"
+        description: "Optional release tag, example: v1.0.2"
         required: false
         type: string
 
@@ -19,9 +19,13 @@ permissions:
 env:
   APP_NAME: Battery-Rock
 
+concurrency:
+  group: battery-rock-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-release:
-    name: Build and upload release
+    name: Build APK and upload public release
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -38,7 +42,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK 35
+      - name: Install Android SDK packages
         shell: bash
         run: |
           yes | sdkmanager --licenses >/dev/null || true
@@ -63,6 +67,11 @@ jobs:
             TAG="v$(date -u +'%Y.%m.%d')-${GITHUB_RUN_NUMBER}"
           fi
 
+          if [[ ! "$TAG" =~ ^v[0-9A-Za-z._-]+$ ]]; then
+            echo "::error::Release tag must start with v and contain only letters, numbers, dot, dash, or underscore."
+            exit 1
+          fi
+
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "release_name=${APP_NAME} ${TAG}" >> "$GITHUB_OUTPUT"
 
@@ -76,7 +85,7 @@ jobs:
           elif [ -f "./settings.gradle" ] || [ -f "./settings.gradle.kts" ] || [ -f "./build.gradle" ] || [ -f "./build.gradle.kts" ]; then
             echo "cmd=gradle" >> "$GITHUB_OUTPUT"
           else
-            echo "::error::No Android/Gradle project was found. Add settings.gradle(.kts), build.gradle(.kts), app/build.gradle(.kts), and Android source files before building an APK."
+            echo "::error::No Android/Gradle project was found."
             exit 1
           fi
 
@@ -95,23 +104,12 @@ jobs:
             echo "Run Number: $GITHUB_RUN_NUMBER"
             echo "Ref: $GITHUB_REF"
             echo "SHA: $GITHUB_SHA"
-            echo "Java version:"
-            java -version 2>&1
+            echo "Tag: ${{ steps.version.outputs.tag }}"
             echo "Gradle command: ${{ steps.gradle_cmd.outputs.cmd }}"
             echo "Android SDK: ${ANDROID_HOME}"
+            echo "Java version:"
+            java -version 2>&1
           } > diagnostics/environment.txt
-
-      - name: Fix CI dependency pins
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path("gradle/libs.versions.toml")
-          text = path.read_text()
-          text = text.replace('composeBom = "2024.10.01"', 'composeBom = "2024.10.00"')
-          path.write_text(text)
-          PY
-          cat gradle/libs.versions.toml | tee diagnostics/libs.versions.toml
 
       - name: Prepare Xposed API
         shell: bash
@@ -123,7 +121,7 @@ jobs:
             exit 0
           fi
 
-          echo "Trying to download official Xposed API 82 jar..."
+          echo "Trying to download Xposed API 82 jar..."
           curl -L --retry 3 --retry-delay 2 --fail \
             -o app/libs/api-82.jar \
             "https://github.com/rovo89/XposedBridge/releases/download/82/api-82.jar" || true
@@ -133,7 +131,7 @@ jobs:
             exit 0
           fi
 
-          echo "Download failed. Generating compileOnly Xposed API stub jar for CI build."
+          echo "Download failed. Generating compile-only Xposed API stub jar for CI build."
           rm -f app/libs/api-82.jar
           STUB_SRC="$RUNNER_TEMP/xposed-api-stub-src"
           STUB_CLASSES="$RUNNER_TEMP/xposed-api-stub-classes"
@@ -153,11 +151,12 @@ jobs:
               public static class MethodHookParam {
                   public Object thisObject;
                   public Object[] args;
-                  public Object result;
-                  public Throwable throwable;
+                  private Object result;
+                  private Throwable throwable;
                   public void setResult(Object result) { this.result = result; }
                   public Object getResult() { return result; }
                   public void setThrowable(Throwable throwable) { this.throwable = throwable; }
+                  public Throwable getThrowable() { return throwable; }
               }
               public static class Unhook {}
               protected void beforeHookedMethod(MethodHookParam param) throws Throwable {}
@@ -209,7 +208,7 @@ jobs:
           jar cf app/libs/api-82.jar -C "$STUB_CLASSES" .
 
           if [ ! -s "app/libs/api-82.jar" ]; then
-            echo "::error::Failed to prepare Xposed API compileOnly jar."
+            echo "::error::Failed to prepare Xposed API compile-only jar."
             exit 1
           fi
 
@@ -218,6 +217,20 @@ jobs:
         run: |
           set -o pipefail
           ${{ steps.gradle_cmd.outputs.cmd }} --no-daemon clean :app:assembleRelease --stacktrace --info 2>&1 | tee diagnostics/build-release-apk.log
+
+      - name: Verify APK signatures
+        shell: bash
+        run: |
+          APKSIGNER="${ANDROID_HOME}/build-tools/35.0.0/apksigner"
+          if [ ! -x "$APKSIGNER" ]; then
+            echo "::error::apksigner was not found."
+            exit 1
+          fi
+
+          find app/build/outputs/apk/release -name "*.apk" -print | while read -r apk; do
+            echo "Checking $apk"
+            "$APKSIGNER" verify --print-certs "$apk" | tee -a diagnostics/apk-signatures.txt
+          done
 
       - name: Capture failure diagnostics
         if: failure()
@@ -244,10 +257,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts
-          find . -type f -path "*/build/outputs/apk/*/*.apk" -print -exec cp {} artifacts/ \;
+          find app/build/outputs/apk/release -name "*.apk" -print -exec cp {} artifacts/ \;
 
           if ! compgen -G "artifacts/*.apk" > /dev/null; then
-            echo "::error::Build completed, but no APK was found under build/outputs/apk."
+            echo "::error::Build completed, but no release APK was found."
             exit 1
           fi
 
@@ -261,20 +274,22 @@ jobs:
       - name: Create release notes
         shell: bash
         run: |
-          cat > RELEASE_NOTES.md <<'EOF'
-          # Battery-Rock Release
+          cat > RELEASE_NOTES.md <<EOF
+          # Battery-Rock ${{ steps.version.outputs.tag }}
 
-          Automated GitHub Actions build for the Battery-Rock LSPosed module.
+          Automated public GitHub Actions APK build for the Battery-Rock LSPosed module.
 
           ## Included
 
-          - APK artifact built from the latest repository source
+          - Release APK built from the latest repository source
+          - APK signature verification during CI
           - SHA256 checksum file
+          - Workflow diagnostics artifact
           - Automatic GitHub Release upload
 
           ## Safety
 
-          Battery-Rock is a root/LSPosed module. Install only on devices you own and control. Test on your ROM first, then enable scopes carefully in LSPosed Manager.
+          Battery-Rock is a root and LSPosed module. Install only on devices you own and control. Test on your ROM first, then enable scopes carefully in LSPosed Manager.
           EOF
 
       - name: Upload workflow artifact
@@ -288,6 +303,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           name: ${{ steps.version.outputs.release_name }}
           body_path: RELEASE_NOTES.md
           files: artifacts/*
