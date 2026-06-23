@@ -84,18 +84,98 @@ jobs:
         run: |
           mkdir -p app/libs
 
-          if [ -f "app/libs/api-82.jar" ]; then
+          if [ -s "app/libs/api-82.jar" ]; then
             echo "api-82.jar already exists."
             exit 0
           fi
 
-          echo "Downloading Xposed API 82 for compileOnly build..."
+          echo "Trying to download official Xposed API 82 jar..."
           curl -L --retry 3 --retry-delay 2 --fail \
             -o app/libs/api-82.jar \
-            "https://github.com/rovo89/XposedBridge/releases/download/82/api-82.jar"
+            "https://github.com/rovo89/XposedBridge/releases/download/82/api-82.jar" || true
+
+          if [ -s "app/libs/api-82.jar" ]; then
+            echo "Downloaded Xposed API jar."
+            exit 0
+          fi
+
+          echo "Download failed. Generating compileOnly Xposed API stub jar for CI build."
+          rm -f app/libs/api-82.jar
+          STUB_SRC="$RUNNER_TEMP/xposed-api-stub-src"
+          STUB_CLASSES="$RUNNER_TEMP/xposed-api-stub-classes"
+          mkdir -p "$STUB_SRC/de/robv/android/xposed/callbacks" "$STUB_CLASSES"
+
+          cat > "$STUB_SRC/de/robv/android/xposed/IXposedHookLoadPackage.java" <<'JAVA'
+          package de.robv.android.xposed;
+          import de.robv.android.xposed.callbacks.XC_LoadPackage;
+          public interface IXposedHookLoadPackage {
+              void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable;
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/XC_MethodHook.java" <<'JAVA'
+          package de.robv.android.xposed;
+          public class XC_MethodHook {
+              public static class MethodHookParam {
+                  public Object thisObject;
+                  public Object[] args;
+                  public Object result;
+                  public Throwable throwable;
+                  public void setResult(Object result) { this.result = result; }
+                  public Object getResult() { return result; }
+                  public void setThrowable(Throwable throwable) { this.throwable = throwable; }
+              }
+              public static class Unhook {}
+              protected void beforeHookedMethod(MethodHookParam param) throws Throwable {}
+              protected void afterHookedMethod(MethodHookParam param) throws Throwable {}
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/XC_MethodReplacement.java" <<'JAVA'
+          package de.robv.android.xposed;
+          public abstract class XC_MethodReplacement extends XC_MethodHook {
+              protected abstract Object replaceHookedMethod(MethodHookParam param) throws Throwable;
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/XposedBridge.java" <<'JAVA'
+          package de.robv.android.xposed;
+          import java.util.Collections;
+          import java.util.Set;
+          public final class XposedBridge {
+              public static void log(String text) {}
+              public static void log(Throwable throwable) {}
+              public static Set<XC_MethodHook.Unhook> hookAllMethods(Class<?> hookClass, String methodName, XC_MethodHook callback) {
+                  return Collections.emptySet();
+              }
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/XposedHelpers.java" <<'JAVA'
+          package de.robv.android.xposed;
+          public final class XposedHelpers {
+              public static XC_MethodHook.Unhook findAndHookMethod(String className, ClassLoader classLoader, String methodName, Object... parameterTypesAndCallback) { return null; }
+              public static XC_MethodHook.Unhook findAndHookMethod(Class<?> clazz, String methodName, Object... parameterTypesAndCallback) { return null; }
+              public static Class<?> findClass(String className, ClassLoader classLoader) throws ClassNotFoundException { return Class.forName(className, false, classLoader); }
+              public static Object callMethod(Object obj, String methodName, Object... args) { return null; }
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/callbacks/XC_LoadPackage.java" <<'JAVA'
+          package de.robv.android.xposed.callbacks;
+          public final class XC_LoadPackage {
+              public static final class LoadPackageParam {
+                  public String packageName;
+                  public ClassLoader classLoader;
+              }
+          }
+          JAVA
+
+          javac -source 8 -target 8 -d "$STUB_CLASSES" $(find "$STUB_SRC" -name '*.java')
+          jar cf app/libs/api-82.jar -C "$STUB_CLASSES" .
 
           if [ ! -s "app/libs/api-82.jar" ]; then
-            echo "::error::app/libs/api-82.jar download failed or file is empty."
+            echo "::error::Failed to prepare Xposed API compileOnly jar."
             exit 1
           fi
 
