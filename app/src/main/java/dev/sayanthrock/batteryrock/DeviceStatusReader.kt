@@ -163,11 +163,11 @@ object DeviceStatusReader {
         else -> "Unknown"
     }
 
-    private fun powerSourceLabel(plugged: Int): String = when (plugged) {
-        BatteryManager.BATTERY_PLUGGED_AC -> "AC charger"
-        BatteryManager.BATTERY_PLUGGED_USB -> "USB"
-        BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless"
-        BatteryManager.BATTERY_PLUGGED_DOCK -> "Dock"
+    private fun powerSourceLabel(plugged: Int): String = when {
+        plugged == BatteryManager.BATTERY_PLUGGED_AC -> "AC charger"
+        plugged == BatteryManager.BATTERY_PLUGGED_USB -> "USB"
+        plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless"
+        Build.VERSION.SDK_INT >= 33 && plugged == BatteryManager.BATTERY_PLUGGED_DOCK -> "Dock"
         else -> "Battery"
     }
 }
