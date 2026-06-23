@@ -2,16 +2,16 @@
 
 # 🔋 Battery-Rock
 
-### SayanthRock LSPosed Battery Optimization Module
+### OPPO · Realme · OnePlus Battery Backup Improvement LSPosed Module
 
-**OPPO • Realme • OnePlus • ColorOS • OxygenOS • Realme UI**
+**ColorOS • OxygenOS • Realme UI • LSPosed • SayanthRock**
 
 [![Battery-Rock](https://img.shields.io/badge/Battery--Rock-v1.0.0-818CF8?style=for-the-badge&logo=android&logoColor=white)](https://github.com/SayanthRock/Battery-Rock)
 [![LSPosed](https://img.shields.io/badge/LSPosed-Module-4F46E5?style=for-the-badge&logo=android)](https://github.com/LSPosed/LSPosed)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Android](https://img.shields.io/badge/Android-12%2B-22C55E?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/)
 
-**A clean Java/Xposed layer battery module focused on reducing background telemetry, excessive jobs, alarms, and wakelock abuse on OPLUS based Android systems.**
+**Battery-Rock is a SayanthRock LSPosed module built to improve battery backup on OPPO, Realme, and OnePlus devices by reducing common background drain sources such as telemetry, excessive jobs, alarms, network calls, analytics writes, and wakelock abuse.**
 
 Made with care by **SayanthRock**.
 
@@ -26,6 +26,23 @@ Made with care by **SayanthRock**.
 Instead of freezing native daemons with shell commands, Battery-Rock works inside the Android Java layer using Xposed hooks. It targets known OPLUS telemetry and background service packages, then reduces common idle battery drain sources such as background jobs, alarms, network telemetry calls, analytics provider writes, and long wakelocks.
 
 This project is designed for rooted users who understand LSPosed module scopes and want a clean, reversible, Java-level battery control module.
+
+---
+
+## 🎯 Project Goal
+
+Battery-Rock is designed to solve **common battery backup problems** caused by unnecessary background activity on supported OPPO, Realme, and OnePlus firmware.
+
+The module focuses on:
+
+- Reducing idle drain
+- Blocking selected telemetry behavior
+- Limiting excessive jobs and alarms
+- Capping long or indefinite wakelocks
+- Keeping the setup reversible through LSPosed
+- Improving background performance without modifying `/system`
+
+Battery behavior depends on ROM version, installed apps, kernel behavior, signal strength, and user settings. Battery-Rock is built to fix the most common drain patterns, but every device should still be tested with logs and real idle-drain checks.
 
 ---
 
@@ -290,6 +307,7 @@ Still, every ROM is different. If something breaks, disable the module in LSPose
 - Add package scope status checker
 - Add user selectable safe, balanced, and aggressive modes
 - Add ROM profile presets for ColorOS, OxygenOS, and Realme UI
+- Continue improving Battery-Rock to handle more common battery backup problems safely
 
 ---
 
@@ -301,9 +319,9 @@ Still, every ROM is different. If something breaks, disable the module in LSPose
 |---|---|
 | Developer | SayanthRock |
 | Project | Battery-Rock |
-| Type | Android LSPosed battery optimization module |
+| Type | Android LSPosed battery backup improvement module |
 | UI Style | Dark, glassmorphism, clean spacing, modern Android feel |
-| Focus | Battery backup, idle drain control, cleaner background behavior |
+| Focus | OPPO, Realme, and OnePlus battery backup, idle drain control, cleaner background behavior |
 
 ---
 
@@ -320,7 +338,7 @@ Still, every ROM is different. If something breaks, disable the module in LSPose
 
 ### 🔋 Battery-Rock by SayanthRock
 
-**Cleaner background behavior. Better idle control. Full LSPosed power.**
+**OPPO · Realme · OnePlus battery backup improvement through safer LSPosed background control.**
 
 [GitHub Profile](https://github.com/SayanthRock) • [Battery-Rock Repo](https://github.com/SayanthRock/Battery-Rock)
 
