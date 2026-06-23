@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Battery-Rock LSPosed Module – Recommended Scope
+        ─────────────────────────────────────────────────
+        These packages are hooked to reduce idle drain, telemetry traffic,
+        wakelock abuse, and background job scheduling on OPLUS devices.
+    -->
+    <string-array name="xposedscope">
+        <!-- Android Framework (system_server) -->
+        <item>android</item>
+        <!-- System UI -->
+        <item>com.android.systemui</item>
+
+        <!-- ── OPLUS Telemetry & Analytics ─────────────────────────────── -->
+        <item>com.oplus.onetrace</item>         <!-- OTrace Telemetry -->
+        <item>com.oplus.appsense</item>         <!-- Usage Analytics -->
+        <item>com.oplus.powermonitor</item>     <!-- Background Power Stats -->
+        <item>com.oplus.logkit</item>           <!-- Log Collection -->
+        <item>com.oplus.olc</item>              <!-- OPLUS Log Center -->
+        <item>com.debug.loggerui</item>         <!-- MTK Logger Control -->
+
+        <!-- ── OPLUS System Services ───────────────────────────────────── -->
+        <item>com.oplus.sau</item>              <!-- System App Updater -->
+        <item>com.oplus.romupdate</item>        <!-- ROM Update Service -->
+        <item>com.nearme.instant.platform</item><!-- OPPO Instant Apps Platform -->
+        <item>com.oplus.appplatform</item>      <!-- OPLUS App Platform -->
+        <item>com.oplus.ocrservice</item>       <!-- OCR Service -->
+        <item>com.coloros.ocrservice</item>     <!-- ColorOS OCR Service -->
+
+        <!-- ── Realme Specific ─────────────────────────────────────────── -->
+        <item>com.realme.systemservice</item>   <!-- Realme System Service -->
+        <item>com.realme.statisticsservice</item>
+
+        <!-- ── OnePlus / OxygenOS Specific ────────────────────────────── -->
+        <item>com.oneplus.statistics</item>     <!-- OnePlus Stats Collection -->
+    </string-array>
+</resources>
