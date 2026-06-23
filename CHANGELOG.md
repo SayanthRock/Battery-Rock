@@ -4,6 +4,23 @@ All notable Battery-Rock updates will be documented here.
 
 ---
 
+## v1.0.4
+
+### Comprehensive APK issue fixes
+
+- Fixed Android battery power-source compatibility for release builds.
+- Added an API guard for dock charging detection so Android 12 and Android 13 devices remain safe.
+- Reduced the chance of release lint failure from newer Android battery constants.
+- Bumped the APK to `1.0.4` / versionCode `5`.
+- Kept the fully automated GitHub Actions release system active.
+- APK builds continue to upload release APK, SHA256 checksum, APK metadata, and diagnostics artifacts.
+
+### Notes
+
+This release focuses on making the latest Battery Health and Phone Performance dashboard safer for public APK builds across supported Android versions.
+
+---
+
 ## v1.0.3
 
 ### Battery backup improvement
