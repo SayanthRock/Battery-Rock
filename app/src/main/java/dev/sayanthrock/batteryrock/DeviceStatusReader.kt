@@ -8,12 +8,6 @@ import android.os.BatteryManager
 import android.os.Build
 import kotlin.math.roundToInt
 
-/**
- * Reads safe, public Android device status values for the Battery-Rock dashboard.
- *
- * These values are informational. Battery-Rock does not require special Android
- * permissions for this dashboard and does not modify system files.
- */
 data class BatteryHealthSnapshot(
     val levelPercent: Int,
     val statusLabel: String,
@@ -36,6 +30,8 @@ data class DevicePerformanceSnapshot(
 )
 
 object DeviceStatusReader {
+
+    private const val BATTERY_PLUGGED_DOCK_COMPAT = 8
 
     fun readBatteryHealth(context: Context): BatteryHealthSnapshot {
         val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -163,11 +159,11 @@ object DeviceStatusReader {
         else -> "Unknown"
     }
 
-    private fun powerSourceLabel(plugged: Int): String = when {
-        plugged == BatteryManager.BATTERY_PLUGGED_AC -> "AC charger"
-        plugged == BatteryManager.BATTERY_PLUGGED_USB -> "USB"
-        plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless"
-        Build.VERSION.SDK_INT >= 33 && plugged == BatteryManager.BATTERY_PLUGGED_DOCK -> "Dock"
+    private fun powerSourceLabel(plugged: Int): String = when (plugged) {
+        BatteryManager.BATTERY_PLUGGED_AC -> "AC charger"
+        BatteryManager.BATTERY_PLUGGED_USB -> "USB"
+        BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless"
+        BATTERY_PLUGGED_DOCK_COMPAT -> "Dock"
         else -> "Battery"
     }
 }
