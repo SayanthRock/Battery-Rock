@@ -15,9 +15,11 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 env:
   APP_NAME: Battery-Rock
+  APP_MODULE: app
 
 concurrency:
   group: battery-rock-release-${{ github.ref }}
@@ -25,13 +27,62 @@ concurrency:
 
 jobs:
   build-release:
-    name: Build APK and upload public release
+    name: Fully automated APK release
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read app version from Gradle
+        id: app_version
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import re
+          from pathlib import Path
+
+          gradle_file = Path("app/build.gradle.kts")
+          text = gradle_file.read_text(encoding="utf-8")
+
+          version_name = re.search(r'versionName\s*=\s*"([^"]+)"', text)
+          version_code = re.search(r'versionCode\s*=\s*(\d+)', text)
+
+          if not version_name or not version_code:
+              raise SystemExit("versionName or versionCode was not found in app/build.gradle.kts")
+
+          print(f"version_name={version_name.group(1)}")
+          print(f"version_code={version_code.group(1)}")
+          PY
+
+      - name: Resolve automatic release tag
+        id: version
+        shell: bash
+        run: |
+          INPUT_TAG="${{ github.event.inputs.release_name || '' }}"
+          VERSION_NAME="${{ steps.app_version.outputs.version_name }}"
+          VERSION_CODE="${{ steps.app_version.outputs.version_code }}"
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME}"
+          elif [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG="v${VERSION_NAME}-build.${GITHUB_RUN_NUMBER}"
+          fi
+
+          if [[ ! "$TAG" =~ ^v[0-9A-Za-z._-]+$ ]]; then
+            echo "::error::Release tag must start with v and contain only letters, numbers, dot, dash, or underscore."
+            exit 1
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "release_name=${APP_NAME} ${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -52,28 +103,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-
-      - name: Resolve release tag
-        id: version
-        shell: bash
-        run: |
-          INPUT_TAG="${{ github.event.inputs.release_name || '' }}"
-
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            TAG="${GITHUB_REF_NAME}"
-          elif [ -n "$INPUT_TAG" ]; then
-            TAG="$INPUT_TAG"
-          else
-            TAG="v$(date -u +'%Y.%m.%d')-${GITHUB_RUN_NUMBER}"
-          fi
-
-          if [[ ! "$TAG" =~ ^v[0-9A-Za-z._-]+$ ]]; then
-            echo "::error::Release tag must start with v and contain only letters, numbers, dot, dash, or underscore."
-            exit 1
-          fi
-
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "release_name=${APP_NAME} ${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Prepare Gradle command
         id: gradle_cmd
@@ -105,6 +134,8 @@ jobs:
             echo "Ref: $GITHUB_REF"
             echo "SHA: $GITHUB_SHA"
             echo "Tag: ${{ steps.version.outputs.tag }}"
+            echo "Version Name: ${{ steps.version.outputs.version_name }}"
+            echo "Version Code: ${{ steps.version.outputs.version_code }}"
             echo "Gradle command: ${{ steps.gradle_cmd.outputs.cmd }}"
             echo "Android SDK: ${ANDROID_HOME}"
             echo "Java version:"
@@ -244,15 +275,7 @@ jobs:
             grep -n -E "FAILURE:|What went wrong|Execution failed|Could not|error:|ERROR:|Exception|Compilation error|Unresolved reference" diagnostics/build-release-apk.log > diagnostics/important-errors.txt || true
           fi
 
-      - name: Upload diagnostics artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.APP_NAME }}-diagnostics-${{ steps.version.outputs.tag }}
-          path: diagnostics/*
-          if-no-files-found: warn
-
-      - name: Collect APK files
+      - name: Collect APK files and metadata
         id: collect
         shell: bash
         run: |
@@ -269,37 +292,81 @@ jobs:
             clean_name="${APP_NAME}-${{ steps.version.outputs.tag }}-${file}"
             mv "$file" "$clean_name"
           done
+
           sha256sum *.apk > SHA256SUMS.txt
 
-      - name: Create release notes
+          {
+            echo "App: ${APP_NAME}"
+            echo "Package: dev.sayanthrock.batteryrock"
+            echo "Version Name: ${{ steps.version.outputs.version_name }}"
+            echo "Version Code: ${{ steps.version.outputs.version_code }}"
+            echo "Release Tag: ${{ steps.version.outputs.tag }}"
+            echo "Commit: ${GITHUB_SHA}"
+            echo "Build Run: ${GITHUB_RUN_NUMBER}"
+            echo "Built At UTC: $(date -u +'%Y-%m-%d %H:%M:%S')"
+          } > APK_INFO.txt
+
+      - name: Create automatic release notes
         shell: bash
         run: |
+          PREVIOUS_TAG="$(git describe --tags --abbrev=0 --match 'v*' HEAD^ 2>/dev/null || true)"
+
+          if [ -n "$PREVIOUS_TAG" ]; then
+            CHANGELOG="$(git log --pretty=format:'- %s (%h)' "$PREVIOUS_TAG"..HEAD || true)"
+          else
+            CHANGELOG="$(git log --pretty=format:'- %s (%h)' -n 20 || true)"
+          fi
+
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="- Automated APK build from the latest repository source."
+          fi
+
           cat > RELEASE_NOTES.md <<EOF
           # Battery-Rock ${{ steps.version.outputs.tag }}
 
-          Automated public GitHub Actions APK build for the Battery-Rock LSPosed module.
+          Fully automated public GitHub Actions release for the Battery-Rock LSPosed module.
 
-          ## Included
+          ## APK Details
 
-          - Release APK built from the latest repository source
-          - APK signature verification during CI
+          - App: Battery-Rock
+          - Package: dev.sayanthrock.batteryrock
+          - Version Name: ${{ steps.version.outputs.version_name }}
+          - Version Code: ${{ steps.version.outputs.version_code }}
+          - Commit: ${GITHUB_SHA}
+          - Build Run: ${GITHUB_RUN_NUMBER}
+
+          ## Included Files
+
+          - Release APK
           - SHA256 checksum file
+          - APK_INFO.txt
           - Workflow diagnostics artifact
-          - Automatic GitHub Release upload
+
+          ## Changes
+
+          ${CHANGELOG}
 
           ## Safety
 
           Battery-Rock is a root and LSPosed module. Install only on devices you own and control. Test on your ROM first, then enable scopes carefully in LSPosed Manager.
           EOF
 
-      - name: Upload workflow artifact
+      - name: Upload diagnostics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-diagnostics-${{ steps.version.outputs.tag }}
+          path: diagnostics/*
+          if-no-files-found: warn
+
+      - name: Upload APK workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APP_NAME }}-${{ steps.version.outputs.tag }}
           path: artifacts/*
           if-no-files-found: error
 
-      - name: Publish GitHub Release
+      - name: Publish GitHub Release automatically
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
