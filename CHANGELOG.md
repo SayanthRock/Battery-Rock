@@ -6,12 +6,12 @@ All notable Battery-Rock updates will be documented here.
 
 ## v1.0.6
 
-### Manual release workflow
+### Automatic GitHub Release workflow
 
-- Added `.github/workflows/manual-release-apk.yml` for manual APK artifact builds.
-- Kept automatic GitHub Release publishing removed.
-- APK upload is now handled manually through GitHub Releases.
-- Updated README and release request documentation for the manual workflow.
+- Added `.github/workflows/auto-release-apk.yml` for automatic APK builds and GitHub Release publishing.
+- The automatic workflow builds the release APK, creates checksum and APK info files, uploads an Actions artifact, and publishes a GitHub Release.
+- Kept `.github/workflows/manual-release-apk.yml` available for artifact-only builds.
+- Updated README and release request documentation for both automatic and manual workflows.
 - Kept APK version at `1.0.6` / versionCode `7`.
 
 ### Build and runtime cleanup
@@ -22,7 +22,7 @@ All notable Battery-Rock updates will be documented here.
 
 ### Notes
 
-This update keeps release publishing under manual control while still allowing GitHub Actions to build a downloadable APK artifact on demand.
+This update restores automatic GitHub Release publishing while keeping the manual artifact workflow available for testing.
 
 ---
 
