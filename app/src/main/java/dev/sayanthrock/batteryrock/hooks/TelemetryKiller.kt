@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam
-import de.robv.android.xposed.XC_MethodReplacement
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
@@ -39,13 +38,13 @@ object TelemetryKiller {
                 Intent::class.java,
                 Int::class.java,
                 Int::class.java,
-                object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
                         XposedBridge.log(
                             "$TAG: Blocked Service.onStartCommand " +
                                 "[${param.thisObject.safeClassName()}] in $packageName"
                         )
-                        return Service.START_NOT_STICKY
+                        param.setResult(Service.START_NOT_STICKY)
                     }
                 }
             )
@@ -59,10 +58,10 @@ object TelemetryKiller {
                 classLoader,
                 "schedule",
                 android.app.job.JobInfo::class.java,
-                object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
                         XposedBridge.log("$TAG: Blocked job scheduling in $packageName")
-                        return android.app.job.JobScheduler.RESULT_FAILURE
+                        param.setResult(android.app.job.JobScheduler.RESULT_FAILURE)
                     }
                 }
             )
@@ -75,8 +74,8 @@ object TelemetryKiller {
                 "java.net.URL",
                 classLoader,
                 "openConnection",
-                object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
                         XposedBridge.log("$TAG: Blocked HTTP openConnection in $packageName")
                         throw IOException("Battery-Rock: network blocked for $packageName")
                     }
@@ -91,8 +90,8 @@ object TelemetryKiller {
                 classLoader,
                 "newCall",
                 requestClass,
-                object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
                         XposedBridge.log("$TAG: Blocked OkHttp call in $packageName")
                         throw IOException("Battery-Rock: network blocked for $packageName")
                     }
