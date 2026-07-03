@@ -9,116 +9,116 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 import dev.sayanthrock.batteryrock.BatteryRockInit
 
 /**
- * FrameworkHook — production hardened LSPosed hooks.
- * Goal: ZERO CRASH mode (never break system_server if hooks fail).
+ * FrameworkHook provides production-hardened LSPosed hooks.
+ *
+ * Every hook is isolated so a ROM method change skips only that hook instead of
+ * crashing system_server, because apparently one tiny method name can ruin an
+ * entire day.
  */
 object FrameworkHook {
 
     private val TAG = "${BatteryRockInit.TAG}/Framework"
-
     private const val MIN_ALARM_INTERVAL_MS = 30 * 60 * 1_000L
+
     private val lastAlarmTime = mutableMapOf<String, Long>()
 
     fun hook(lpparam: XC_LoadPackage.LoadPackageParam) {
-        runCatching {
+        tryHook("JobSchedulerService init") {
             hookJobScheduler(lpparam.classLoader)
-        }.onFailure {
-            logError("JobScheduler init failed", it)
         }
 
-        runCatching {
+        tryHook("AlarmManagerService init") {
             hookAlarmManager(lpparam.classLoader)
-        }.onFailure {
-            logError("AlarmManager init failed", it)
         }
     }
 
     private fun hookJobScheduler(classLoader: ClassLoader) {
-        runCatching {
-            val serviceClass = XposedHelpers.findClass(
-                "com.android.server.job.JobSchedulerService",
-                classLoader
-            )
+        val serviceClass = XposedHelpers.findClass(
+            "com.android.server.job.JobSchedulerService",
+            classLoader
+        )
 
-            XposedBridge.hookAllMethods(
-                serviceClass,
-                "scheduleAsPackage",
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        runCatching {
-                            val pkg = param.args.findTelemetryPackage() ?: return
-                            XposedBridge.log("$TAG: Dropped job for $pkg")
-                            param.result = JobScheduler.RESULT_FAILURE
-                        }.onFailure { logError("scheduleAsPackage hook failed", it) }
-                    }
+        XposedBridge.hookAllMethods(
+            serviceClass,
+            "scheduleAsPackage",
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    runCatching {
+                        val packageName = param.args.findTelemetryPackage() ?: return
+                        XposedBridge.log("$TAG: Dropped job for $packageName")
+                        param.setResult(JobScheduler.RESULT_FAILURE)
+                    }.onFailure { AutoHookControllerEngine.reportEvent("scheduleAsPackage", it) }
                 }
-            )
+            }
+        )
 
-            XposedBridge.hookAllMethods(
-                serviceClass,
-                "schedule",
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        runCatching {
-                            val pkg = param.args.findTelemetryPackage() ?: return
-                            XposedBridge.log("$TAG: Dropped fallback job for $pkg")
-                            param.result = JobScheduler.RESULT_FAILURE
-                        }.onFailure { logError("schedule hook failed", it) }
-                    }
+        XposedBridge.hookAllMethods(
+            serviceClass,
+            "schedule",
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    runCatching {
+                        val packageName = param.args.findTelemetryPackage() ?: return
+                        XposedBridge.log("$TAG: Dropped fallback job for $packageName")
+                        param.setResult(JobScheduler.RESULT_FAILURE)
+                    }.onFailure { AutoHookControllerEngine.reportEvent("schedule", it) }
                 }
-            )
-
-        }.onFailure {
-            logError("JobSchedulerService hook failed", it)
-        }
+            }
+        )
     }
 
     private fun hookAlarmManager(classLoader: ClassLoader) {
-        runCatching {
-            val serviceClass = XposedHelpers.findClass(
-                "com.android.server.alarm.AlarmManagerService",
-                classLoader
-            )
+        val serviceClass = XposedHelpers.findClass(
+            "com.android.server.alarm.AlarmManagerService",
+            classLoader
+        )
 
-            XposedBridge.hookAllMethods(
-                serviceClass,
-                "setImpl",
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        runCatching {
-                            val pkg = param.args.findTelemetryPackage() ?: return
-                            throttleAlarm(param, pkg)
-                        }.onFailure { logError("setImpl hook failed", it) }
-                    }
+        XposedBridge.hookAllMethods(
+            serviceClass,
+            "setImpl",
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    runCatching {
+                        val packageName = param.args.findTelemetryPackage() ?: return
+                        throttleAlarm(param, packageName)
+                    }.onFailure { AutoHookControllerEngine.reportEvent("setImpl", it) }
                 }
-            )
-
-        }.onFailure {
-            logError("AlarmManagerService hook failed", it)
-        }
+            }
+        )
     }
 
-    private fun throttleAlarm(param: MethodHookParam, pkg: String) {
+    private fun throttleAlarm(param: MethodHookParam, packageName: String) {
         val now = System.currentTimeMillis()
-        val last = synchronized(lastAlarmTime) { lastAlarmTime[pkg] ?: 0L }
+        val last = synchronized(lastAlarmTime) { lastAlarmTime[packageName] ?: 0L }
 
         if (now - last < MIN_ALARM_INTERVAL_MS) {
-            XposedBridge.log("$TAG: Throttled alarm for $pkg")
-            param.result = null
+            XposedBridge.log("$TAG: Throttled alarm for $packageName")
+            param.setResult(null)
         } else {
-            synchronized(lastAlarmTime) { lastAlarmTime[pkg] = now }
+            synchronized(lastAlarmTime) { lastAlarmTime[packageName] = now }
         }
     }
 
     private fun Array<*>.findTelemetryPackage(): String? {
-        return firstOrNull { it is String && BatteryRockInit.TELEMETRY_PACKAGES.contains(it) } as? String
+        return firstOrNull { value ->
+            value is String && value in BatteryRockInit.TELEMETRY_PACKAGES
+        } as? String
     }
 
-    private fun logError(tag: String, t: Throwable) {
+    private inline fun tryHook(label: String, block: () -> Unit) {
         try {
-            XposedBridge.log("$TAG: ERROR $tag -> ${t.javaClass.simpleName}: ${t.message}")
+            block()
+        } catch (throwable: Throwable) {
+            AutoHookControllerEngine.reportEvent(label, throwable)
+            log("skipped $label -> ${throwable.javaClass.simpleName}: ${throwable.message}")
+        }
+    }
+
+    private fun log(message: String) {
+        try {
+            XposedBridge.log("$TAG: $message")
         } catch (_: Throwable) {
-            // absolute safety: never crash system_server
+            // Never crash system_server from logging.
         }
     }
 }
