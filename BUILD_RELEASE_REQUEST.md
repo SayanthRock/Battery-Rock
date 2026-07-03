@@ -1,6 +1,6 @@
-# Build Release APK Request
+# Normal APK Upload Request
 
-This file is used to trigger and document the automated GitHub Actions release APK workflow.
+This file documents the current release direction for Battery-Rock.
 
 ## Current request
 
@@ -8,27 +8,23 @@ This file is used to trigger and document the automated GitHub Actions release A
 - Target version: 1.0.6
 - Version code: 7
 - Build type: Release APK
-- Trigger reason: Resolve APK build and release workflow problems step by step
-- Workflow: `.github/workflows/build-release.yml`
+- Upload method: Normal manual upload
+- Automated GitHub Actions release workflow: Removed
 
-## Expected GitHub Actions flow
+## Manual upload flow
 
-After this commit is pushed to `main`, GitHub Actions should automatically:
-
-1. Prepare Java 17, Android SDK 35, Gradle 8.9, and the compile-only module API.
-2. Build the release APK with full stacktrace output.
-3. Save the full Gradle build log to `diagnostics/build-release-apk.log`.
-4. Print the real Gradle or Kotlin error lines under `Important Gradle errors` if the build fails.
-5. Verify APK signatures when build succeeds.
-6. Collect APK files and metadata.
-7. Generate SHA256 checksums.
-8. Upload workflow artifacts and diagnostics.
-9. Publish a GitHub Release with APK assets.
+1. Build the APK locally with Android Studio or terminal.
+2. Confirm the release APK exists in `app/build/outputs/apk/release/`.
+3. Rename the APK to a clear release name, for example `Battery-Rock-v1.0.6.apk`.
+4. Open GitHub Releases.
+5. Draft a new release with tag `v1.0.6`.
+6. Upload the APK file normally.
+7. Add release notes.
+8. Publish the release.
 
 ## Current fix status
 
-- Release workflow diagnostics: improved.
-- Compile-only API setup: kept automatic with stub fallback.
-- Kotlin hook parameter imports: fixed.
-- Runtime hook code: changed to safer method-hook style.
-- Release version: updated to `1.0.6` / `7`.
+- Automated APK release workflow: removed.
+- README: updated for normal manual upload.
+- Release version: kept at `1.0.6` / `7`.
+- APK upload: handled manually through GitHub Releases.
