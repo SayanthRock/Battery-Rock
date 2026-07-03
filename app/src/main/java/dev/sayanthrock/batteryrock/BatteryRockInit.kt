@@ -15,8 +15,7 @@ import dev.sayanthrock.batteryrock.hooks.WakelockGuard
  * Battery-Rock LSPosed module entry point.
  *
  * Hooks are routed through a safety controller so one broken ROM method does
- * not break the full release build or the target process. Humanity survives,
- * which is apparently the goal here.
+ * not break the full release build or the target process.
  */
 class BatteryRockInit : IXposedHookLoadPackage {
 
