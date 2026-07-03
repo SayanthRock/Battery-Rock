@@ -8,7 +8,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
 import dev.sayanthrock.batteryrock.BatteryRockInit
 
 /**
- * WakelockGuard — loaded in telemetry packages and SystemUI.
+ * WakelockGuard is loaded in telemetry packages and SystemUI.
  *
  * It caps long or indefinite PowerManager.WakeLock acquisitions to reduce
  * runaway idle drain without permanently changing system files.
@@ -16,11 +16,8 @@ import dev.sayanthrock.batteryrock.BatteryRockInit
 object WakelockGuard {
 
     private val TAG = "${BatteryRockInit.TAG}/WakelockGuard"
-
-    /** Maximum wakelock duration Battery-Rock allows: 30 seconds. */
     private const val MAX_WAKELOCK_MS = 30_000L
 
-    /** Re-entrancy guard per thread. */
     private val inHook: ThreadLocal<Boolean> = ThreadLocal.withInitial { false }
 
     fun hook(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -28,10 +25,8 @@ object WakelockGuard {
         hookIndefiniteAcquire(lpparam.packageName, lpparam.classLoader)
     }
 
-    // ─── acquire(long timeout) ────────────────────────────────────────────────
-
-    private fun hookTimedAcquire(pkg: String, classLoader: ClassLoader) {
-        tryHook("WakeLock.acquire(long) ($pkg)") {
+    private fun hookTimedAcquire(packageName: String, classLoader: ClassLoader) {
+        tryHook("WakeLock.acquire(long) ($packageName)") {
             XposedHelpers.findAndHookMethod(
                 "android.os.PowerManager\$WakeLock",
                 classLoader,
@@ -41,11 +36,11 @@ object WakelockGuard {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         if (inHook.get() == true) return
 
-                        val requested = param.args[0] as Long
+                        val requested = param.args.firstOrNull() as? Long ?: return
                         if (requested == 0L || requested > MAX_WAKELOCK_MS) {
                             XposedBridge.log(
                                 "$TAG: Capped wakelock ${requested}ms to ${MAX_WAKELOCK_MS}ms " +
-                                    "[${param.thisObject::class.java.simpleName}] in $pkg"
+                                    "[${param.thisObject.safeClassName()}] in $packageName"
                             )
                             param.args[0] = MAX_WAKELOCK_MS
                         }
@@ -55,10 +50,8 @@ object WakelockGuard {
         }
     }
 
-    // ─── acquire() ────────────────────────────────────────────────────────────
-
-    private fun hookIndefiniteAcquire(pkg: String, classLoader: ClassLoader) {
-        tryHook("WakeLock.acquire() ($pkg)") {
+    private fun hookIndefiniteAcquire(packageName: String, classLoader: ClassLoader) {
+        tryHook("WakeLock.acquire() ($packageName)") {
             XposedHelpers.findAndHookMethod(
                 "android.os.PowerManager\$WakeLock",
                 classLoader,
@@ -71,10 +64,10 @@ object WakelockGuard {
                         try {
                             XposedBridge.log(
                                 "$TAG: Converted indefinite wakelock to ${MAX_WAKELOCK_MS}ms " +
-                                    "[${param.thisObject::class.java.simpleName}] in $pkg"
+                                    "[${param.thisObject.safeClassName()}] in $packageName"
                             )
                             XposedHelpers.callMethod(param.thisObject, "acquire", MAX_WAKELOCK_MS)
-                            param.result = null
+                            param.setResult(null)
                         } finally {
                             inHook.set(false)
                         }
@@ -84,13 +77,14 @@ object WakelockGuard {
         }
     }
 
-    // ─── Utility ──────────────────────────────────────────────────────────────
+    private fun Any?.safeClassName(): String = this?.javaClass?.simpleName ?: "unknown"
 
     private inline fun tryHook(label: String, block: () -> Unit) {
         try {
             block()
-        } catch (t: Throwable) {
-            XposedBridge.log("$TAG: ✗ $label - ${t.javaClass.simpleName}: ${t.message}")
+        } catch (throwable: Throwable) {
+            AutoHookControllerEngine.reportEvent(label, throwable)
+            XposedBridge.log("$TAG: skipped $label - ${throwable.javaClass.simpleName}: ${throwable.message}")
         }
     }
 }
