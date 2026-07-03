@@ -4,7 +4,7 @@
 
 ### OPPO · Realme · OnePlus Battery Backup Improvement Module
 
-**Battery Backup · Battery Health · Phone Performance Level · Manual APK Release Workflow**
+**Battery Backup · Battery Health · Phone Performance Level · Automatic GitHub Release APK**
 
 [![Battery-Rock](https://img.shields.io/badge/Battery--Rock-v1.0.6-818CF8?style=for-the-badge&logo=android&logoColor=white)](https://github.com/SayanthRock/Battery-Rock)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
@@ -18,7 +18,7 @@ Battery-Rock is an Android module-style app for OPPO, Realme, and OnePlus device
 
 ## Latest Update, v1.0.6
 
-This update keeps automatic release publishing removed, but adds a manual GitHub Actions workflow that can build the APK artifact on demand. The APK can then be uploaded normally to GitHub Releases.
+This update restores automatic GitHub Release publishing with a dedicated APK release workflow. A manual artifact workflow is still available when you only want to build and download the APK without publishing a release.
 
 | Area | Status |
 |---|---|
@@ -27,9 +27,9 @@ This update keeps automatic release publishing removed, but adds a manual GitHub
 | Android target | Android 12+ / SDK 35 |
 | Kotlin | `2.0.21` |
 | AGP | `8.7.3` |
-| Automatic release publishing | Removed |
-| Manual APK workflow | Added |
-| GitHub Release upload | Manual |
+| Automatic GitHub Release workflow | Added |
+| Manual APK artifact workflow | Available |
+| GitHub Release upload | Automatic through workflow |
 
 ---
 
@@ -60,11 +60,43 @@ Device behavior depends on ROM version, installed packages, signal strength, ker
 | Phone performance level | Calculates a clear status from CPU cores, Android API, low-RAM state, and memory class |
 | Compose UI | Dark, clean dashboard with battery and performance cards |
 | Scope list | Recommended package list in `res/xml/scope.xml` |
-| APK release | Build with the manual workflow or locally, then upload manually to GitHub Releases |
+| Automatic release | Builds APK, uploads artifact, and publishes GitHub Release automatically |
+| Manual artifact build | Builds APK artifact without publishing a release |
 
 ---
 
-## Manual APK Release Workflow
+## Automatic GitHub Release Workflow
+
+Workflow file:
+
+```text
+.github/workflows/auto-release-apk.yml
+```
+
+This workflow builds the release APK and publishes a GitHub Release automatically.
+
+It runs when:
+
+- code is pushed to `main`
+- a tag like `v1.0.6` is pushed
+- it is started manually from GitHub Actions
+
+For a normal push to `main`, it creates a build tag like:
+
+```text
+v1.0.6-build.123
+```
+
+The release includes:
+
+- release APK
+- `SHA256SUMS.txt`
+- `APK_INFO.txt`
+- generated release notes
+
+---
+
+## Manual APK Artifact Workflow
 
 Workflow file:
 
@@ -72,21 +104,13 @@ Workflow file:
 .github/workflows/manual-release-apk.yml
 ```
 
-This workflow does **not** publish a GitHub Release automatically. It only builds the release APK and uploads the APK as a workflow artifact. You can then download the artifact and upload it normally to GitHub Releases.
+This workflow only builds and uploads the APK as a workflow artifact. It does not publish a GitHub Release.
 
-### Run the workflow
-
-1. Open the repository on GitHub.
-2. Go to **Actions**.
-3. Select **Manual APK Release Build**.
-4. Click **Run workflow**.
-5. Enter a release name such as `v1.0.6`.
-6. Download the uploaded artifact after the workflow finishes.
-7. Upload the APK manually in GitHub Releases.
+Use it when you want to download the APK first and upload manually later.
 
 ---
 
-## Normal Local APK Build and Upload
+## Normal Local APK Build
 
 Use Android Studio or terminal:
 
@@ -105,18 +129,6 @@ Recommended APK name format:
 ```text
 Battery-Rock-v1.0.6.apk
 ```
-
-### Upload normally to GitHub Releases
-
-1. Open the repository on GitHub.
-2. Go to **Releases**.
-3. Click **Draft a new release**.
-4. Create a tag such as `v1.0.6`.
-5. Upload the APK file.
-6. Add release notes.
-7. Publish the release.
-
-No automatic release publishing is required. Tiny mercy from the YAML mines.
 
 ---
 
@@ -146,6 +158,7 @@ Battery-Rock/
 │       │   │   └── WakelockGuard.kt
 │       │   └── ui/theme/Theme.kt
 │       └── res/xml/scope.xml
+├── .github/workflows/auto-release-apk.yml
 ├── .github/workflows/manual-release-apk.yml
 ├── BUILD_RELEASE_REQUEST.md
 ├── CHANGELOG.md
@@ -166,23 +179,8 @@ Battery-Rock/
 | `FrameworkHook.kt` | Framework-level scheduling and alarm handling code |
 | `TelemetryKiller.kt` | Scoped package runtime handling code |
 | `WakelockGuard.kt` | Wake lock duration handling code |
-| `manual-release-apk.yml` | Manual build workflow that uploads APK artifacts without auto-publishing a release |
-
----
-
-## Local Build Note
-
-For local Android Studio or terminal builds, place the compile-only API jar here when required by your local environment:
-
-```text
-app/libs/api-82.jar
-```
-
-Then build with:
-
-```bash
-gradle :app:assembleRelease
-```
+| `auto-release-apk.yml` | Automatic APK build and GitHub Release publishing workflow |
+| `manual-release-apk.yml` | Manual APK artifact workflow without release publishing |
 
 ---
 
