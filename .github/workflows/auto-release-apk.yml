@@ -1,0 +1,253 @@
+name: Automatic GitHub Release APK
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Optional release tag, example: v1.0.6"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  APP_NAME: Battery-Rock
+  PACKAGE_NAME: dev.sayanthrock.batteryrock
+
+jobs:
+  build-and-release:
+    name: Build APK and publish GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from Gradle
+        id: app_version
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import re
+          from pathlib import Path
+          text = Path("app/build.gradle.kts").read_text(encoding="utf-8")
+          name = re.search(r'versionName\s*=\s*"([^"]+)"', text)
+          code = re.search(r'versionCode\s*=\s*(\d+)', text)
+          if not name or not code:
+              raise SystemExit("Could not read versionName/versionCode from app/build.gradle.kts")
+          print(f"version_name={name.group(1)}")
+          print(f"version_code={code.group(1)}")
+          PY
+
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        run: |
+          INPUT_TAG="${{ github.event.inputs.release_tag || '' }}"
+          VERSION_NAME="${{ steps.app_version.outputs.version_name }}"
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME}"
+          elif [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG="v${VERSION_NAME}-build.${GITHUB_RUN_NUMBER}"
+          fi
+
+          if [[ ! "$TAG" =~ ^v[0-9A-Za-z._-]+$ ]]; then
+            echo "::error::Release tag must start with v and use only letters, numbers, dot, dash, or underscore."
+            exit 1
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "release_name=${APP_NAME} ${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Prepare local Android config
+        shell: bash
+        run: |
+          echo "sdk.dir=${ANDROID_HOME}" > local.properties
+
+      - name: Prepare compile-only API jar
+        shell: bash
+        run: |
+          set -e
+          mkdir -p app/libs
+          rm -f app/libs/api-82.jar
+
+          STUB_SRC="$RUNNER_TEMP/api-stub-src"
+          STUB_CLASSES="$RUNNER_TEMP/api-stub-classes"
+          mkdir -p "$STUB_SRC/de/robv/android/xposed/callbacks" "$STUB_CLASSES"
+
+          cat > "$STUB_SRC/de/robv/android/xposed/IXposedHookLoadPackage.java" <<'JAVA'
+          package de.robv.android.xposed;
+          import de.robv.android.xposed.callbacks.XC_LoadPackage;
+          public interface IXposedHookLoadPackage {
+              void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable;
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/XC_MethodHook.java" <<'JAVA'
+          package de.robv.android.xposed;
+          public class XC_MethodHook {
+              public static class MethodHookParam {
+                  public Object thisObject;
+                  public Object[] args;
+                  public void setResult(Object result) {}
+                  public Object getResult() { return null; }
+                  public void setThrowable(Throwable throwable) {}
+                  public Throwable getThrowable() { return null; }
+              }
+              public static class Unhook {}
+              protected void beforeHookedMethod(MethodHookParam param) throws Throwable {}
+              protected void afterHookedMethod(MethodHookParam param) throws Throwable {}
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/XC_MethodReplacement.java" <<'JAVA'
+          package de.robv.android.xposed;
+          public abstract class XC_MethodReplacement extends XC_MethodHook {
+              protected abstract Object replaceHookedMethod(MethodHookParam param) throws Throwable;
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/XposedBridge.java" <<'JAVA'
+          package de.robv.android.xposed;
+          import java.util.Collections;
+          import java.util.Set;
+          public final class XposedBridge {
+              public static void log(String text) {}
+              public static void log(Throwable throwable) {}
+              public static Set<XC_MethodHook.Unhook> hookAllMethods(Class<?> hookClass, String methodName, XC_MethodHook callback) {
+                  return Collections.emptySet();
+              }
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/XposedHelpers.java" <<'JAVA'
+          package de.robv.android.xposed;
+          public final class XposedHelpers {
+              public static XC_MethodHook.Unhook findAndHookMethod(String className, ClassLoader classLoader, String methodName, Object... parameterTypesAndCallback) { return null; }
+              public static XC_MethodHook.Unhook findAndHookMethod(Class<?> clazz, String methodName, Object... parameterTypesAndCallback) { return null; }
+              public static Class<?> findClass(String className, ClassLoader classLoader) throws ClassNotFoundException { return Class.forName(className, false, classLoader); }
+              public static Object callMethod(Object obj, String methodName, Object... args) { return null; }
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/callbacks/XC_LoadPackage.java" <<'JAVA'
+          package de.robv.android.xposed.callbacks;
+          public final class XC_LoadPackage {
+              public static final class LoadPackageParam {
+                  public String packageName;
+                  public ClassLoader classLoader;
+              }
+          }
+          JAVA
+
+          javac -source 8 -target 8 -d "$STUB_CLASSES" $(find "$STUB_SRC" -name '*.java')
+          jar cf app/libs/api-82.jar -C "$STUB_CLASSES" .
+          ls -lh app/libs/api-82.jar
+
+      - name: Build release APK
+        shell: bash
+        run: |
+          gradle --no-daemon --console=plain :app:assembleRelease
+
+      - name: Collect release files
+        shell: bash
+        run: |
+          mkdir -p release-artifacts
+          find app/build/outputs/apk/release -name "*.apk" -print -exec cp {} release-artifacts/ \;
+
+          if ! compgen -G "release-artifacts/*.apk" > /dev/null; then
+            echo "::error::No release APK found."
+            exit 1
+          fi
+
+          cd release-artifacts
+          for apk in *.apk; do
+            mv "$apk" "${APP_NAME}-${{ steps.release.outputs.tag }}.apk"
+          done
+          sha256sum *.apk > SHA256SUMS.txt
+          cat > APK_INFO.txt <<EOF
+          App: ${APP_NAME}
+          Package: ${PACKAGE_NAME}
+          Version Name: ${{ steps.app_version.outputs.version_name }}
+          Version Code: ${{ steps.app_version.outputs.version_code }}
+          Release Tag: ${{ steps.release.outputs.tag }}
+          Commit: ${GITHUB_SHA}
+          Build Run: ${GITHUB_RUN_NUMBER}
+          EOF
+
+      - name: Create release notes
+        shell: bash
+        run: |
+          cat > RELEASE_NOTES.md <<EOF
+          # ${APP_NAME} ${{ steps.release.outputs.tag }}
+
+          Automatic GitHub Release APK build.
+
+          ## APK Details
+
+          - Package: ${PACKAGE_NAME}
+          - Version Name: ${{ steps.app_version.outputs.version_name }}
+          - Version Code: ${{ steps.app_version.outputs.version_code }}
+          - Commit: ${GITHUB_SHA}
+          - Build Run: ${GITHUB_RUN_NUMBER}
+
+          ## Included Files
+
+          - Release APK
+          - SHA256SUMS.txt
+          - APK_INFO.txt
+          EOF
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-${{ steps.release.outputs.tag }}
+          path: release-artifacts/*
+          if-no-files-found: error
+
+      - name: Publish GitHub Release automatically
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.release.outputs.release_name }}
+          body_path: RELEASE_NOTES.md
+          files: release-artifacts/*
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
