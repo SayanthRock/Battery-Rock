@@ -6,17 +6,23 @@ All notable Battery-Rock updates will be documented here.
 
 ## v1.0.6
 
-### Release APK build hardening
+### Manual release workflow
 
-- Hardened the LSPosed module entry point so the normal APK process reports inactive until LSPosed actually loads the module.
-- Routed framework, telemetry, and wakelock hooks through the safety controller to reduce crash risk across ROM changes.
-- Replaced fragile hook-result property assignments with explicit Xposed `setResult(...)` calls for better Kotlin/Xposed API compatibility.
-- Normalized `XC_MethodReplacement` return types to `Any?` for release Kotlin compilation compatibility.
-- Bumped the APK to `1.0.6` / versionCode `7` so GitHub Actions creates a fresh release build.
+- Added `.github/workflows/manual-release-apk.yml` for manual APK artifact builds.
+- Kept automatic GitHub Release publishing removed.
+- APK upload is now handled manually through GitHub Releases.
+- Updated README and release request documentation for the manual workflow.
+- Kept APK version at `1.0.6` / versionCode `7`.
+
+### Build and runtime cleanup
+
+- Hardened the module entry point so the normal APK process reports inactive until the module actually loads.
+- Routed framework, telemetry, and wakelock code through the safety controller.
+- Replaced fragile hook-result assignments with explicit `setResult(...)` calls for better Kotlin compatibility.
 
 ### Notes
 
-This update focuses on the failing release APK workflow and safer runtime behavior for OPPO, Realme, and OnePlus LSPosed scope packages.
+This update keeps release publishing under manual control while still allowing GitHub Actions to build a downloadable APK artifact on demand.
 
 ---
 
@@ -57,7 +63,7 @@ This release focuses on making the latest Battery Health and Phone Performance d
 
 ### Notes
 
-This update improves the app dashboard and reduces APK automation confusion. Battery-Rock remains an LSPosed module, so users should enable only the recommended scopes and test on their own OPPO, Realme, or OnePlus ROM.
+This update improves the app dashboard and reduces APK automation confusion.
 
 ---
 
@@ -85,10 +91,6 @@ This update improves the app dashboard and reduces APK automation confusion. Bat
 - Made the release APK installable from GitHub Actions by applying a signing config to the release build.
 - Kept Java 17, Android SDK 35, AGP 8.7.3, Kotlin 2.0.21, and Gradle 8.9 aligned for stable CI builds.
 
-### Notes
-
-This release is focused on fixing build, upload, and public release automation problems. Battery-Rock is still a root and LSPosed module, so users should test scope packages carefully on their own OPPO, Realme, or OnePlus ROM.
-
 ---
 
 ## v1.0.1
@@ -96,24 +98,13 @@ This release is focused on fixing build, upload, and public release automation p
 ### APK build fixes
 
 - Improved GitHub Actions APK build flow.
-- Added automatic Xposed API preparation for CI builds.
-- Added fallback compileOnly Xposed API stub generation when the official jar download is unavailable.
+- Added automatic API preparation for CI builds.
+- Added fallback compile-only API stub generation when the official jar download is unavailable.
 - Changed release build to Java 17 and Kotlin JVM target 17.
 - Disabled release minify and resource shrinking for the first stable APK build flow.
 - Simplified Compose UI dependencies to reduce missing icon dependency build failures.
 - Updated APK build command to target `:app:assembleRelease` directly.
 - Kept automatic artifact upload and GitHub Release publishing enabled.
-
-### Improvements
-
-- Updated Battery-Rock README with current build status.
-- Added clearer setup instructions for GitHub Actions and local builds.
-- Added safer troubleshooting guidance for LSPosed and APK build problems.
-- Added an improvement plan for future releases.
-
-### Notes
-
-Battery-Rock is a root and LSPosed module. Device behavior depends on ROM version, installed packages, kernel behavior, and selected LSPosed scope. Test carefully before using it as a daily driver.
 
 ---
 
@@ -121,9 +112,9 @@ Battery-Rock is a root and LSPosed module. Device behavior depends on ROM versio
 
 ### Initial project
 
-- Added LSPosed module entry point.
+- Added module entry point.
 - Added framework hooks for background job and alarm control.
 - Added telemetry package hooks.
 - Added wakelock guard.
 - Added Compose based module UI.
-- Added recommended LSPosed scope list for OPPO, Realme, and OnePlus packages.
+- Added recommended scope list for OPPO, Realme, and OnePlus packages.
