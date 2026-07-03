@@ -4,6 +4,23 @@ All notable Battery-Rock updates will be documented here.
 
 ---
 
+## v1.0.9
+
+### UI UX design refresh
+
+- Redesigned the main dashboard with a premium dark hero card.
+- Added compact quick status cards for battery, health and performance score.
+- Improved spacing, rounded cards, contrast and typography hierarchy.
+- Refreshed the Material dark theme palette with indigo, cyan, green and amber accents.
+- Aligned XML color resources with the Compose theme.
+- Updated APK version to `1.0.9` / versionCode `10`.
+
+### Notes
+
+This update focuses on visual polish, easier scanning and a cleaner dashboard layout while keeping the v1.0.8 startup fix.
+
+---
+
 ## v1.0.8
 
 ### Launcher crash fix
@@ -107,7 +124,7 @@ This update improves the app dashboard and reduces APK automation confusion.
 - Pushes to `main` automatically create a build tag like `v1.0.2-build.123`.
 - Version tags like `v1.0.2` still publish clean stable releases.
 - Manual workflow runs can still provide a custom release tag.
-- Release notes are generated automatically from recent Git commits.
+- Release notes are generated automatically from recent commits.
 - APK files are renamed with the app name and release tag.
 - `SHA256SUMS.txt` and `APK_INFO.txt` are generated automatically.
 - APK signature verification runs before upload.
@@ -148,4 +165,4 @@ This update improves the app dashboard and reduces APK automation confusion.
 - Added telemetry package hooks.
 - Added wakelock guard.
 - Added Compose based module UI.
-- Added recommended scope list for OPPO, Realme, and OnePlus packages.
+- Added recommended scope list for OPPO, Realme and OnePlus packages.
