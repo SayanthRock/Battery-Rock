@@ -4,11 +4,26 @@ All notable Battery-Rock updates will be documented here.
 
 ---
 
+## v1.0.8
+
+### Launcher crash fix
+
+- Added `BatteryRockStatus.kt`, a normal app startup class with no module API imports.
+- Updated `MainActivity` to use `BatteryRockStatus.isModuleActive()` instead of loading the module entrypoint directly.
+- Updated `BatteryRockInit` so the module active status is routed through `BatteryRockStatus` when the module is actually loaded.
+- Updated APK version to `1.0.8` / versionCode `9`.
+
+### Notes
+
+This update targets the installed app crash shown as `Battery-Rock keeps stopping` by preventing the launcher process from loading the module entrypoint class directly.
+
+---
+
 ## v1.0.7
 
 ### Internal APK fixes
 
-- Hardened the in-app battery status reader with safe fallback values for ROMs that hide or block battery details.
+- Hardened the in-app battery status reader with safe fallback values for ROMs that hide or limit battery details.
 - Hardened the in-app performance reader so the dashboard can open even when system services return limited data.
 - Cleaned Android manifest metadata and removed the unused boot permission.
 - Updated APK version to `1.0.7` / versionCode `8`.
@@ -66,7 +81,7 @@ This release focuses on making the latest Battery Health and Phone Performance d
 - Added a live Battery-Rock device dashboard for battery backup monitoring.
 - Added battery level, charging state, battery health, temperature, voltage, power source, and estimated capacity display.
 - Added safer battery-health guidance based on Android battery status values.
-- Added phone performance level calculation using CPU cores, Android API version, low-RAM status, and app memory class.
+- Added phone performance level calculation using CPU cores, Android API version, low-RAM status, and memory class.
 - Added clearer UI cards for Battery Health and Phone Performance Level.
 - Updated the app title/subtitle to reflect battery backup, battery health, and performance improvement.
 
