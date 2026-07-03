@@ -247,7 +247,18 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          ${{ steps.gradle_cmd.outputs.cmd }} --no-daemon clean :app:assembleRelease --stacktrace --info 2>&1 | tee diagnostics/build-release-apk.log
+          BUILD_LOG="diagnostics/build-release-apk.log"
+
+          if ! ${{ steps.gradle_cmd.outputs.cmd }} --no-daemon clean :app:assembleRelease --stacktrace 2>&1 | tee "$BUILD_LOG"; then
+            echo ""
+            echo "::group::Important Gradle errors"
+            grep -n -E "^e:|FAILURE:|What went wrong|Execution failed|Could not|Unresolved reference|Compilation error|error:|ERROR:" "$BUILD_LOG" || true
+            echo ""
+            echo "--- Last 160 log lines ---"
+            tail -n 160 "$BUILD_LOG" || true
+            echo "::endgroup::"
+            exit 1
+          fi
 
       - name: Verify APK signatures
         shell: bash
@@ -272,7 +283,7 @@ jobs:
           find . -path "*/build/outputs/logs/*" -type f -print > diagnostics/output-log-files.txt || true
           find . -name "*.log" -type f -print > diagnostics/all-log-files.txt || true
           if [ -f diagnostics/build-release-apk.log ]; then
-            grep -n -E "FAILURE:|What went wrong|Execution failed|Could not|error:|ERROR:|Exception|Compilation error|Unresolved reference" diagnostics/build-release-apk.log > diagnostics/important-errors.txt || true
+            grep -n -E "^e:|FAILURE:|What went wrong|Execution failed|Could not|error:|ERROR:|Exception|Compilation error|Unresolved reference" diagnostics/build-release-apk.log > diagnostics/important-errors.txt || true
           fi
 
       - name: Collect APK files and metadata
