@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       release_name:
-        description: "Optional release tag, example: v1.0.2"
+        description: "Optional release tag, example: v1.0.6"
         required: false
         type: string
 
@@ -45,9 +45,7 @@ jobs:
           import re
           from pathlib import Path
 
-          gradle_file = Path("app/build.gradle.kts")
-          text = gradle_file.read_text(encoding="utf-8")
-
+          text = Path("app/build.gradle.kts").read_text(encoding="utf-8")
           version_name = re.search(r'versionName\s*=\s*"([^"]+)"', text)
           version_code = re.search(r'versionCode\s*=\s*(\d+)', text)
 
@@ -147,22 +145,7 @@ jobs:
         run: |
           mkdir -p app/libs
 
-          if [ -s "app/libs/api-82.jar" ]; then
-            echo "api-82.jar already exists."
-            exit 0
-          fi
-
-          echo "Trying to download Xposed API 82 jar..."
-          curl -L --retry 3 --retry-delay 2 --fail \
-            -o app/libs/api-82.jar \
-            "https://github.com/rovo89/XposedBridge/releases/download/82/api-82.jar" || true
-
-          if [ -s "app/libs/api-82.jar" ]; then
-            echo "Downloaded Xposed API jar."
-            exit 0
-          fi
-
-          echo "Download failed. Generating compile-only Xposed API stub jar for CI build."
+          echo "Generating compile-only Xposed API stub jar for deterministic CI builds."
           rm -f app/libs/api-82.jar
           STUB_SRC="$RUNNER_TEMP/xposed-api-stub-src"
           STUB_CLASSES="$RUNNER_TEMP/xposed-api-stub-classes"
@@ -248,15 +231,22 @@ jobs:
         run: |
           set -o pipefail
           BUILD_LOG="diagnostics/build-release-apk.log"
+          IMPORTANT_LOG="diagnostics/important-errors.txt"
 
-          if ! ${{ steps.gradle_cmd.outputs.cmd }} --no-daemon clean :app:assembleRelease --stacktrace 2>&1 | tee "$BUILD_LOG"; then
+          echo "Building release APK with plain console output."
+          if ! ${{ steps.gradle_cmd.outputs.cmd }} --no-daemon --console=plain clean :app:assembleRelease 2>&1 | tee "$BUILD_LOG"; then
+            grep -n -E "^e:|FAILURE:|What went wrong|Execution failed|Could not|Unresolved reference|Compilation error|error:|ERROR:" "$BUILD_LOG" > "$IMPORTANT_LOG" || true
+
             echo ""
-            echo "::group::Important Gradle errors"
-            grep -n -E "^e:|FAILURE:|What went wrong|Execution failed|Could not|Unresolved reference|Compilation error|error:|ERROR:" "$BUILD_LOG" || true
-            echo ""
-            echo "--- Last 160 log lines ---"
-            tail -n 160 "$BUILD_LOG" || true
-            echo "::endgroup::"
+            echo "================ REAL BUILD ERROR START ================"
+            if [ -s "$IMPORTANT_LOG" ]; then
+              cat "$IMPORTANT_LOG"
+            else
+              echo "No compact error lines matched. Showing last 120 build log lines instead."
+              tail -n 120 "$BUILD_LOG" || true
+            fi
+            echo "================ REAL BUILD ERROR END =================="
+            echo "Full log saved at $BUILD_LOG"
             exit 1
           fi
 
@@ -335,7 +325,7 @@ jobs:
           cat > RELEASE_NOTES.md <<EOF
           # Battery-Rock ${{ steps.version.outputs.tag }}
 
-          Fully automated public GitHub Actions release for the Battery-Rock LSPosed module.
+          Fully automated public GitHub Actions release for Battery-Rock.
 
           ## APK Details
 
@@ -359,7 +349,7 @@ jobs:
 
           ## Safety
 
-          Battery-Rock is a root and LSPosed module. Install only on devices you own and control. Test on your ROM first, then enable scopes carefully in LSPosed Manager.
+          Battery-Rock is for advanced Android users. Install only on devices you own and control. Test your ROM first, then enable scopes carefully.
           EOF
 
       - name: Upload diagnostics artifact
