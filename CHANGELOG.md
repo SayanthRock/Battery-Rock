@@ -4,6 +4,22 @@ All notable Battery-Rock updates will be documented here.
 
 ---
 
+## v1.0.7
+
+### Internal APK fixes
+
+- Hardened the in-app battery status reader with safe fallback values for ROMs that hide or block battery details.
+- Hardened the in-app performance reader so the dashboard can open even when system services return limited data.
+- Cleaned Android manifest metadata and removed the unused boot permission.
+- Updated APK version to `1.0.7` / versionCode `8`.
+- Kept automatic GitHub Release publishing and the manual artifact workflow available.
+
+### Notes
+
+This update focuses on making the installed APK open safely and show useful status data across more OPPO, Realme and OnePlus ROM variants.
+
+---
+
 ## v1.0.6
 
 ### Automatic GitHub Release workflow
