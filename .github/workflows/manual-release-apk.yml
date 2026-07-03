@@ -54,10 +54,82 @@ jobs:
       - name: Prepare compile-only API jar
         shell: bash
         run: |
+          set -e
           mkdir -p app/libs
-          curl -L --retry 3 --retry-delay 2 --fail \
-            -o app/libs/api-82.jar \
-            "https://github.com/rovo89/XposedBridge/releases/download/82/api-82.jar"
+          rm -f app/libs/api-82.jar
+
+          STUB_SRC="$RUNNER_TEMP/api-stub-src"
+          STUB_CLASSES="$RUNNER_TEMP/api-stub-classes"
+          mkdir -p "$STUB_SRC/de/robv/android/xposed/callbacks" "$STUB_CLASSES"
+
+          cat > "$STUB_SRC/de/robv/android/xposed/IXposedHookLoadPackage.java" <<'JAVA'
+          package de.robv.android.xposed;
+          import de.robv.android.xposed.callbacks.XC_LoadPackage;
+          public interface IXposedHookLoadPackage {
+              void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable;
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/XC_MethodHook.java" <<'JAVA'
+          package de.robv.android.xposed;
+          public class XC_MethodHook {
+              public static class MethodHookParam {
+                  public Object thisObject;
+                  public Object[] args;
+                  public void setResult(Object result) {}
+                  public Object getResult() { return null; }
+                  public void setThrowable(Throwable throwable) {}
+                  public Throwable getThrowable() { return null; }
+              }
+              public static class Unhook {}
+              protected void beforeHookedMethod(MethodHookParam param) throws Throwable {}
+              protected void afterHookedMethod(MethodHookParam param) throws Throwable {}
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/XC_MethodReplacement.java" <<'JAVA'
+          package de.robv.android.xposed;
+          public abstract class XC_MethodReplacement extends XC_MethodHook {
+              protected abstract Object replaceHookedMethod(MethodHookParam param) throws Throwable;
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/XposedBridge.java" <<'JAVA'
+          package de.robv.android.xposed;
+          import java.util.Collections;
+          import java.util.Set;
+          public final class XposedBridge {
+              public static void log(String text) {}
+              public static void log(Throwable throwable) {}
+              public static Set<XC_MethodHook.Unhook> hookAllMethods(Class<?> hookClass, String methodName, XC_MethodHook callback) {
+                  return Collections.emptySet();
+              }
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/XposedHelpers.java" <<'JAVA'
+          package de.robv.android.xposed;
+          public final class XposedHelpers {
+              public static XC_MethodHook.Unhook findAndHookMethod(String className, ClassLoader classLoader, String methodName, Object... parameterTypesAndCallback) { return null; }
+              public static XC_MethodHook.Unhook findAndHookMethod(Class<?> clazz, String methodName, Object... parameterTypesAndCallback) { return null; }
+              public static Class<?> findClass(String className, ClassLoader classLoader) throws ClassNotFoundException { return Class.forName(className, false, classLoader); }
+              public static Object callMethod(Object obj, String methodName, Object... args) { return null; }
+          }
+          JAVA
+
+          cat > "$STUB_SRC/de/robv/android/xposed/callbacks/XC_LoadPackage.java" <<'JAVA'
+          package de.robv.android.xposed.callbacks;
+          public final class XC_LoadPackage {
+              public static final class LoadPackageParam {
+                  public String packageName;
+                  public ClassLoader classLoader;
+              }
+          }
+          JAVA
+
+          javac -source 8 -target 8 -d "$STUB_CLASSES" $(find "$STUB_SRC" -name '*.java')
+          jar cf app/libs/api-82.jar -C "$STUB_CLASSES" .
+          ls -lh app/libs/api-82.jar
 
       - name: Build release APK
         shell: bash
