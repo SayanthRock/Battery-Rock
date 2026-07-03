@@ -6,25 +6,24 @@ import de.robv.android.xposed.XC_MethodReplacement
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import dev.sayanthrock.batteryrock.hooks.AutoHookControllerEngine
 import dev.sayanthrock.batteryrock.hooks.FrameworkHook
 import dev.sayanthrock.batteryrock.hooks.TelemetryKiller
 import dev.sayanthrock.batteryrock.hooks.WakelockGuard
 
 /**
- * Battery-Rock LSPosed Module (Enterprise Mode Enabled)
+ * Battery-Rock LSPosed module entry point.
  *
- * Now includes:
- * - Global crash isolation layer
- * - Safe routing per process
- * - Enterprise SAFE_MODE switch
- * - Zero-crash hook guarantees
+ * Hooks are routed through a safety controller so one broken ROM method does
+ * not break the full release build or the target process. Humanity survives,
+ * which is apparently the goal here.
  */
 class BatteryRockInit : IXposedHookLoadPackage {
 
     companion object {
         const val TAG = "BatteryRock"
 
-        /** Enterprise safety switch (can be extended later via UI/config) */
+        /** Emergency switch for reducing hook activity without changing scopes. */
         @JvmStatic
         var SAFE_MODE: Boolean = false
 
@@ -47,49 +46,68 @@ class BatteryRockInit : IXposedHookLoadPackage {
             "com.oneplus.statistics",
         )
 
+        /**
+         * Default is false for the normal APK process. LSPosed replaces this
+         * method with true when the module is actually loaded.
+         */
         @JvmStatic
-        fun isModuleActive(): Boolean = true
+        fun isModuleActive(): Boolean = false
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
+        val packageName = lpparam.packageName
+
         runCatching {
             when {
-                lpparam.packageName == BuildConfig.APPLICATION_ID -> {
-                    XposedHelpers.findAndHookMethod(
-                        BatteryRockInit::class.java.name,
-                        lpparam.classLoader,
-                        "isModuleActive",
-                        object : XC_MethodReplacement() {
-                            override fun replaceHookedMethod(param: MethodHookParam): Any = true
-                        }
-                    )
-                }
+                packageName == BuildConfig.APPLICATION_ID -> hookSelfStatus(lpparam)
 
-                lpparam.packageName == "android" -> {
-                    if (!SAFE_MODE) {
-                        XposedBridge.log("$TAG: FrameworkHook enabled")
+                packageName == "android" -> {
+                    if (AutoHookControllerEngine.shouldEnableHooks(packageName)) {
+                        log("FrameworkHook enabled")
                         FrameworkHook.hook(lpparam)
                     } else {
-                        XposedBridge.log("$TAG: SAFE_MODE active, skipping FrameworkHook")
+                        log("FrameworkHook skipped by safety controller")
                     }
                 }
 
-                lpparam.packageName in TELEMETRY_PACKAGES -> {
-                    XposedBridge.log("$TAG: Telemetry hooks → ${lpparam.packageName}")
-                    TelemetryKiller.hook(lpparam)
-                    WakelockGuard.hook(lpparam)
+                packageName in TELEMETRY_PACKAGES -> {
+                    if (AutoHookControllerEngine.shouldEnableHooks(packageName)) {
+                        log("Telemetry hooks enabled for $packageName")
+                        TelemetryKiller.hook(lpparam)
+                        WakelockGuard.hook(lpparam)
+                    } else {
+                        log("Telemetry hooks skipped for $packageName")
+                    }
                 }
 
-                lpparam.packageName == "com.android.systemui" -> {
-                    WakelockGuard.hook(lpparam)
+                packageName == "com.android.systemui" -> {
+                    if (AutoHookControllerEngine.shouldEnableHooks(packageName)) {
+                        WakelockGuard.hook(lpparam)
+                    }
                 }
             }
-        }.onFailure { t ->
-            try {
-                XposedBridge.log("$TAG: Global hook crash prevented -> ${t.javaClass.simpleName}: ${t.message}")
-            } catch (_: Throwable) {
-                // absolute zero-crash guarantee
+        }.onFailure { throwable ->
+            AutoHookControllerEngine.reportEvent("handleLoadPackage:$packageName", throwable)
+            log("Global hook crash prevented -> ${throwable.javaClass.simpleName}: ${throwable.message}")
+        }
+    }
+
+    private fun hookSelfStatus(lpparam: XC_LoadPackage.LoadPackageParam) {
+        XposedHelpers.findAndHookMethod(
+            BatteryRockInit::class.java.name,
+            lpparam.classLoader,
+            "isModuleActive",
+            object : XC_MethodReplacement() {
+                override fun replaceHookedMethod(param: MethodHookParam): Any? = true
             }
+        )
+    }
+
+    private fun log(message: String) {
+        try {
+            XposedBridge.log("$TAG: $message")
+        } catch (_: Throwable) {
+            // Logging must never crash the target process.
         }
     }
 }
