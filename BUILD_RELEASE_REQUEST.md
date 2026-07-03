@@ -5,8 +5,8 @@ This file documents the current release direction for Battery-Rock.
 ## Current request
 
 - App: Battery-Rock
-- Target version: 1.0.8
-- Version code: 9
+- Target version: 1.0.9
+- Version code: 10
 - Build type: Release APK
 - Automatic workflow file: `.github/workflows/auto-release-apk.yml`
 - Manual artifact workflow file: `.github/workflows/manual-release-apk.yml`
@@ -15,7 +15,7 @@ This file documents the current release direction for Battery-Rock.
 
 ## Automatic release flow
 
-1. Push code to `main`, push a tag like `v1.0.8`, or start the workflow manually.
+1. Push code to `main`, push a tag like `v1.0.9`, or start the workflow manually.
 2. The workflow reads `versionName` and `versionCode` from `app/build.gradle.kts`.
 3. The workflow builds the release APK.
 4. The workflow collects the APK, checksum file, and APK info file.
@@ -27,16 +27,15 @@ This file documents the current release direction for Battery-Rock.
 1. Open GitHub Actions.
 2. Select **Manual APK Release Build**.
 3. Click **Run workflow**.
-4. Enter release name, for example `v1.0.8`.
+4. Enter release name, for example `v1.0.9`.
 5. Download the APK artifact after the workflow finishes.
 
 ## Current fix status
 
-- MainActivity no longer loads the module entrypoint directly.
-- Added `BatteryRockStatus.kt` for normal app startup.
-- Module active check now uses `BatteryRockStatus`.
-- In-app device status reader: hardened.
-- APK manifest metadata: cleaned.
+- UI/UX dashboard redesign: added.
+- Premium dark theme palette: refreshed.
+- XML colors: aligned with the Compose theme.
+- MainActivity startup safety: kept.
 - Automatic GitHub Release workflow: kept.
 - Manual APK workflow: kept.
-- Release version: updated to `1.0.8` / `9`.
+- Release version: updated to `1.0.9` / `10`.
