@@ -5,8 +5,8 @@ This file documents the current release direction for Battery-Rock.
 ## Current request
 
 - App: Battery-Rock
-- Target version: 1.0.6
-- Version code: 7
+- Target version: 1.0.7
+- Version code: 8
 - Build type: Release APK
 - Automatic workflow file: `.github/workflows/auto-release-apk.yml`
 - Manual artifact workflow file: `.github/workflows/manual-release-apk.yml`
@@ -15,7 +15,7 @@ This file documents the current release direction for Battery-Rock.
 
 ## Automatic release flow
 
-1. Push code to `main`, push a tag like `v1.0.6`, or start the workflow manually.
+1. Push code to `main`, push a tag like `v1.0.7`, or start the workflow manually.
 2. The workflow reads `versionName` and `versionCode` from `app/build.gradle.kts`.
 3. The workflow builds the release APK.
 4. The workflow collects the APK, checksum file, and APK info file.
@@ -27,12 +27,13 @@ This file documents the current release direction for Battery-Rock.
 1. Open GitHub Actions.
 2. Select **Manual APK Release Build**.
 3. Click **Run workflow**.
-4. Enter release name, for example `v1.0.6`.
+4. Enter release name, for example `v1.0.7`.
 5. Download the APK artifact after the workflow finishes.
 
 ## Current fix status
 
-- Automatic GitHub Release workflow: added.
+- In-app device status reader: hardened.
+- APK manifest metadata: cleaned.
+- Automatic GitHub Release workflow: kept.
 - Manual APK workflow: kept.
-- README: updated for automatic and manual workflows.
-- Release version: kept at `1.0.6` / `7`.
+- Release version: updated to `1.0.7` / `8`.
