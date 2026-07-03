@@ -10,22 +10,26 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// ─── SayanthRock 2026 Design Language ────────────────────────────────────────
-// Near-black bg · Indigo-300 primary · Glass tints at 5-10% opacity
-
 private val BatteryRockColors = darkColorScheme(
-    primary          = Color(0xFF818CF8),  // indigo-300
-    onPrimary        = Color(0xFF0A0A0A),
-    primaryContainer = Color(0xFF1A1A3E),
-    secondary        = Color(0xFF22C55E),  // green-500 (active state)
-    onSecondary      = Color(0xFF0A0A0A),
-    background       = Color(0xFF0A0A0A),
-    onBackground     = Color(0xFFE5E7EB),
-    surface          = Color(0xFF111111),
-    onSurface        = Color(0xFFD1D5DB),
-    surfaceVariant   = Color(0xFF1C1C2E),
-    outline          = Color(0xFF374151),
-    error            = Color(0xFFEF4444),
+    primary = Color(0xFF818CF8),
+    onPrimary = Color(0xFF05060A),
+    primaryContainer = Color(0xFF20234A),
+    onPrimaryContainer = Color(0xFFE0E7FF),
+    secondary = Color(0xFF38BDF8),
+    onSecondary = Color(0xFF02131F),
+    secondaryContainer = Color(0xFF0B2C3F),
+    tertiary = Color(0xFF22C55E),
+    onTertiary = Color(0xFF03140A),
+    background = Color(0xFF05060A),
+    onBackground = Color(0xFFF8FAFC),
+    surface = Color(0xFF0B1020),
+    onSurface = Color(0xFFE5E7EB),
+    surfaceVariant = Color(0xFF111827),
+    onSurfaceVariant = Color(0xFFA7B0C0),
+    outline = Color(0xFF334155),
+    outlineVariant = Color(0xFF1E293B),
+    error = Color(0xFFEF4444),
+    onError = Color(0xFF1A0505),
 )
 
 @Composable
@@ -37,11 +41,12 @@ fun BatteryRockTheme(content: @Composable () -> Unit) {
             window.statusBarColor = Color.Transparent.toArgb()
             window.navigationBarColor = Color.Transparent.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
         }
     }
 
     MaterialTheme(
         colorScheme = BatteryRockColors,
-        content = content
+        content = content,
     )
 }
