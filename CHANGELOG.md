@@ -4,6 +4,22 @@ All notable Battery-Rock updates will be documented here.
 
 ---
 
+## v1.0.6
+
+### Release APK build hardening
+
+- Hardened the LSPosed module entry point so the normal APK process reports inactive until LSPosed actually loads the module.
+- Routed framework, telemetry, and wakelock hooks through the safety controller to reduce crash risk across ROM changes.
+- Replaced fragile hook-result property assignments with explicit Xposed `setResult(...)` calls for better Kotlin/Xposed API compatibility.
+- Normalized `XC_MethodReplacement` return types to `Any?` for release Kotlin compilation compatibility.
+- Bumped the APK to `1.0.6` / versionCode `7` so GitHub Actions creates a fresh release build.
+
+### Notes
+
+This update focuses on the failing release APK workflow and safer runtime behavior for OPPO, Realme, and OnePlus LSPosed scope packages.
+
+---
+
 ## v1.0.4
 
 ### Comprehensive APK issue fixes
