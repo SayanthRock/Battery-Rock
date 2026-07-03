@@ -1,8 +1,7 @@
 package dev.sayanthrock.batteryrock
 
 import de.robv.android.xposed.IXposedHookLoadPackage
-import de.robv.android.xposed.XC_MethodHook.MethodHookParam
-import de.robv.android.xposed.XC_MethodReplacement
+import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
@@ -46,8 +45,8 @@ class BatteryRockInit : IXposedHookLoadPackage {
         )
 
         /**
-         * Default is false for the normal APK process. LSPosed replaces this
-         * method with true when the module is actually loaded.
+         * Default is false for the normal APK process. LSPosed sets this to
+         * true only after the module is loaded.
          */
         @JvmStatic
         fun isModuleActive(): Boolean = false
@@ -96,8 +95,10 @@ class BatteryRockInit : IXposedHookLoadPackage {
             BatteryRockInit::class.java.name,
             lpparam.classLoader,
             "isModuleActive",
-            object : XC_MethodReplacement() {
-                override fun replaceHookedMethod(param: MethodHookParam): Any? = true
+            object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    param.setResult(true)
+                }
             }
         )
     }
