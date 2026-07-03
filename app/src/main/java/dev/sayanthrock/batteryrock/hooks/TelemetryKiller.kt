@@ -10,9 +10,10 @@ import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import dev.sayanthrock.batteryrock.BatteryRockInit
+import java.io.IOException
 
 /**
- * TelemetryKiller — loaded inside selected OPLUS, Realme, and OnePlus
+ * TelemetryKiller is loaded inside selected OPLUS, Realme, and OnePlus
  * telemetry or drain package processes.
  */
 object TelemetryKiller {
@@ -20,17 +21,17 @@ object TelemetryKiller {
     private val TAG = "${BatteryRockInit.TAG}/TelemetryKiller"
 
     fun hook(lpparam: XC_LoadPackage.LoadPackageParam) {
-        val pkg = lpparam.packageName
-        blockServiceStarts(pkg, lpparam.classLoader)
-        blockJobScheduling(pkg, lpparam.classLoader)
-        blockNetworkAccess(pkg, lpparam.classLoader)
-        blockContentProviderInserts(pkg, lpparam.classLoader)
+        val packageName = lpparam.packageName
+        val classLoader = lpparam.classLoader
+
+        blockServiceStarts(packageName, classLoader)
+        blockJobScheduling(packageName, classLoader)
+        blockNetworkAccess(packageName, classLoader)
+        blockContentProviderInserts(packageName, classLoader)
     }
 
-    // ─── Service ──────────────────────────────────────────────────────────────
-
-    private fun blockServiceStarts(pkg: String, classLoader: ClassLoader) {
-        tryHook("Service.onStartCommand ($pkg)") {
+    private fun blockServiceStarts(packageName: String, classLoader: ClassLoader) {
+        tryHook("Service.onStartCommand ($packageName)") {
             XposedHelpers.findAndHookMethod(
                 "android.app.Service",
                 classLoader,
@@ -39,10 +40,10 @@ object TelemetryKiller {
                 Int::class.java,
                 Int::class.java,
                 object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any {
+                    override fun replaceHookedMethod(param: MethodHookParam): Any? {
                         XposedBridge.log(
                             "$TAG: Blocked Service.onStartCommand " +
-                                "[${param.thisObject::class.java.simpleName}] in $pkg"
+                                "[${param.thisObject.safeClassName()}] in $packageName"
                         )
                         return Service.START_NOT_STICKY
                     }
@@ -51,18 +52,16 @@ object TelemetryKiller {
         }
     }
 
-    // ─── JobScheduler ─────────────────────────────────────────────────────────
-
-    private fun blockJobScheduling(pkg: String, classLoader: ClassLoader) {
-        tryHook("JobSchedulerImpl.schedule ($pkg)") {
+    private fun blockJobScheduling(packageName: String, classLoader: ClassLoader) {
+        tryHook("JobSchedulerImpl.schedule ($packageName)") {
             XposedHelpers.findAndHookMethod(
                 "android.app.JobSchedulerImpl",
                 classLoader,
                 "schedule",
                 android.app.job.JobInfo::class.java,
                 object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Any {
-                        XposedBridge.log("$TAG: Blocked job scheduling in $pkg")
+                    override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                        XposedBridge.log("$TAG: Blocked job scheduling in $packageName")
                         return android.app.job.JobScheduler.RESULT_FAILURE
                     }
                 }
@@ -70,43 +69,40 @@ object TelemetryKiller {
         }
     }
 
-    // ─── Network Access ───────────────────────────────────────────────────────
-
-    private fun blockNetworkAccess(pkg: String, classLoader: ClassLoader) {
-        tryHook("URL.openConnection ($pkg)") {
+    private fun blockNetworkAccess(packageName: String, classLoader: ClassLoader) {
+        tryHook("URL.openConnection ($packageName)") {
             XposedHelpers.findAndHookMethod(
                 "java.net.URL",
                 classLoader,
                 "openConnection",
                 object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Nothing {
-                        XposedBridge.log("$TAG: Blocked HTTP openConnection in $pkg")
-                        throw java.io.IOException("Battery-Rock: network blocked for $pkg")
+                    override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                        XposedBridge.log("$TAG: Blocked HTTP openConnection in $packageName")
+                        throw IOException("Battery-Rock: network blocked for $packageName")
                     }
                 }
             )
         }
 
-        tryHook("OkHttpClient.newCall ($pkg)") {
+        tryHook("OkHttpClient.newCall ($packageName)") {
+            val requestClass = XposedHelpers.findClass("okhttp3.Request", classLoader)
             XposedHelpers.findAndHookMethod(
                 "okhttp3.OkHttpClient",
                 classLoader,
                 "newCall",
-                XposedHelpers.findClass("okhttp3.Request", classLoader),
+                requestClass,
                 object : XC_MethodReplacement() {
-                    override fun replaceHookedMethod(param: MethodHookParam): Nothing {
-                        XposedBridge.log("$TAG: Blocked OkHttp call in $pkg")
-                        throw java.io.IOException("Battery-Rock: network blocked for $pkg")
+                    override fun replaceHookedMethod(param: MethodHookParam): Any? {
+                        XposedBridge.log("$TAG: Blocked OkHttp call in $packageName")
+                        throw IOException("Battery-Rock: network blocked for $packageName")
                     }
                 }
             )
         }
     }
 
-    // ─── ContentProvider ──────────────────────────────────────────────────────
-
-    private fun blockContentProviderInserts(pkg: String, classLoader: ClassLoader) {
-        tryHook("ContentResolver.insert ($pkg)") {
+    private fun blockContentProviderInserts(packageName: String, classLoader: ClassLoader) {
+        tryHook("ContentResolver.insert ($packageName)") {
             XposedHelpers.findAndHookMethod(
                 "android.content.ContentResolver",
                 classLoader,
@@ -115,11 +111,11 @@ object TelemetryKiller {
                 android.content.ContentValues::class.java,
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        val uri = param.args[0] as? Uri ?: return
+                        val uri = param.args.firstOrNull() as? Uri ?: return
                         val host = uri.host ?: return
                         if (isTelemetryUri(host)) {
-                            XposedBridge.log("$TAG: Blocked CP insert [$uri] in $pkg")
-                            param.result = null
+                            XposedBridge.log("$TAG: Blocked provider insert [$uri] in $packageName")
+                            param.setResult(null)
                         }
                     }
                 }
@@ -133,13 +129,14 @@ object TelemetryKiller {
             host.contains("oplus.log", ignoreCase = true) ||
             host.contains("powermonitor", ignoreCase = true)
 
-    // ─── Utility ──────────────────────────────────────────────────────────────
+    private fun Any?.safeClassName(): String = this?.javaClass?.simpleName ?: "unknown"
 
     private inline fun tryHook(label: String, block: () -> Unit) {
         try {
             block()
-        } catch (t: Throwable) {
-            XposedBridge.log("$TAG: ✗ $label - ${t.javaClass.simpleName}: ${t.message}")
+        } catch (throwable: Throwable) {
+            AutoHookControllerEngine.reportEvent(label, throwable)
+            XposedBridge.log("$TAG: skipped $label - ${throwable.javaClass.simpleName}: ${throwable.message}")
         }
     }
 }
