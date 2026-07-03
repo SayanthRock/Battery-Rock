@@ -12,8 +12,7 @@ import dev.sayanthrock.batteryrock.BatteryRockInit
  * FrameworkHook provides production-hardened LSPosed hooks.
  *
  * Every hook is isolated so a ROM method change skips only that hook instead of
- * crashing system_server, because apparently one tiny method name can ruin an
- * entire day.
+ * crashing system_server.
  */
 object FrameworkHook {
 
