@@ -12,21 +12,20 @@ import dev.sayanthrock.batteryrock.hooks.TelemetryKiller
 import dev.sayanthrock.batteryrock.hooks.WakelockGuard
 
 /**
- * Battery-Rock LSPosed module entry point.
+ * Battery-Rock module entry point.
  *
- * Hooks are routed through a safety controller so one broken ROM method does
- * not break the full release build or the target process.
+ * The launcher UI must not directly load this class because it depends on the
+ * module API. MainActivity uses BatteryRockStatus instead, which is safe in the
+ * normal APK process.
  */
 class BatteryRockInit : IXposedHookLoadPackage {
 
     companion object {
         const val TAG = "BatteryRock"
 
-        /** Emergency switch for reducing hook activity without changing scopes. */
         @JvmStatic
         var SAFE_MODE: Boolean = false
 
-        /** Packages Battery-Rock actively hooks to suppress telemetry and drain. */
         val TELEMETRY_PACKAGES = setOf(
             "com.oplus.onetrace",
             "com.oplus.appsense",
@@ -44,13 +43,6 @@ class BatteryRockInit : IXposedHookLoadPackage {
             "com.realme.statisticsservice",
             "com.oneplus.statistics",
         )
-
-        /**
-         * Default is false for the normal APK process. LSPosed sets this to
-         * true only after the module is loaded.
-         */
-        @JvmStatic
-        fun isModuleActive(): Boolean = false
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -93,7 +85,7 @@ class BatteryRockInit : IXposedHookLoadPackage {
 
     private fun hookSelfStatus(lpparam: XC_LoadPackage.LoadPackageParam) {
         XposedHelpers.findAndHookMethod(
-            BatteryRockInit::class.java.name,
+            BatteryRockStatus::class.java.name,
             lpparam.classLoader,
             "isModuleActive",
             object : XC_MethodHook() {
