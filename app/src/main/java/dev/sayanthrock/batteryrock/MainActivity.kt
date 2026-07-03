@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BatteryRockTheme {
-                BatteryRockScreen(isActive = BatteryRockInit.isModuleActive())
+                BatteryRockScreen(isActive = BatteryRockStatus.isModuleActive())
             }
         }
     }
