@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.Build
+import java.util.Locale
 import kotlin.math.roundToInt
 
 data class BatteryHealthSnapshot(
@@ -33,8 +34,9 @@ object DeviceStatusReader {
 
     private const val BATTERY_PLUGGED_DOCK_COMPAT = 8
 
-    fun readBatteryHealth(context: Context): BatteryHealthSnapshot {
-        val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+    fun readBatteryHealth(context: Context): BatteryHealthSnapshot = runCatching {
+        val appContext = context.applicationContext
+        val intent = appContext.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = intent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
         val levelPercent = if (level >= 0 && scale > 0) {
@@ -43,37 +45,52 @@ object DeviceStatusReader {
             -1
         }
 
-        val status = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN)
-            ?: BatteryManager.BATTERY_STATUS_UNKNOWN
-        val health = intent?.getIntExtra(BatteryManager.EXTRA_HEALTH, BatteryManager.BATTERY_HEALTH_UNKNOWN)
-            ?: BatteryManager.BATTERY_HEALTH_UNKNOWN
-        val plugged = intent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
-        val temperatureRaw = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
-            ?: Int.MIN_VALUE
-        val voltageMv = intent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1) ?: -1
+        val status = intent.readIntExtra(
+            BatteryManager.EXTRA_STATUS,
+            BatteryManager.BATTERY_STATUS_UNKNOWN
+        )
+        val health = intent.readIntExtra(
+            BatteryManager.EXTRA_HEALTH,
+            BatteryManager.BATTERY_HEALTH_UNKNOWN
+        )
+        val plugged = intent.readIntExtra(BatteryManager.EXTRA_PLUGGED, 0)
+        val temperatureRaw = intent.readIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
+        val voltageMv = intent.readIntExtra(BatteryManager.EXTRA_VOLTAGE, -1)
 
-        return BatteryHealthSnapshot(
+        BatteryHealthSnapshot(
             levelPercent = levelPercent,
             statusLabel = batteryStatusLabel(status),
             healthLabel = batteryHealthLabel(health),
             temperatureC = if (temperatureRaw != Int.MIN_VALUE) {
-                "%.1f°C".format(temperatureRaw / 10f)
+                String.format(Locale.US, "%.1f°C", temperatureRaw / 10f)
             } else {
                 "Unknown"
             },
             voltageMv = voltageMv,
-            capacityEstimate = readCapacityEstimate(context),
+            capacityEstimate = readCapacityEstimate(appContext),
             powerSource = powerSourceLabel(plugged),
             summary = batterySummary(health, status, levelPercent),
         )
+    }.getOrElse {
+        BatteryHealthSnapshot(
+            levelPercent = -1,
+            statusLabel = "Unknown",
+            healthLabel = "Unknown",
+            temperatureC = "Unknown",
+            voltageMv = -1,
+            capacityEstimate = "Unknown",
+            powerSource = "Unknown",
+            summary = "Battery status could not be read on this ROM. The app remains safe to open.",
+        )
     }
 
-    fun readPerformanceLevel(context: Context): DevicePerformanceSnapshot {
-        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    fun readPerformanceLevel(context: Context): DevicePerformanceSnapshot = runCatching {
+        val appContext = context.applicationContext
+        val activityManager = appContext.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
         val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
-        val memoryClass = activityManager.memoryClass.coerceAtLeast(1)
-        val largeMemoryClass = activityManager.largeMemoryClass.coerceAtLeast(memoryClass)
-        val isLowRam = activityManager.isLowRamDevice
+        val memoryClass = activityManager?.memoryClass?.coerceAtLeast(1) ?: 128
+        val largeMemoryClass = activityManager?.largeMemoryClass?.coerceAtLeast(memoryClass) ?: memoryClass
+        val isLowRam = activityManager?.isLowRamDevice ?: false
 
         var score = 38
         score += cores.coerceAtMost(8) * 4
@@ -95,7 +112,7 @@ object DeviceStatusReader {
             else -> "Basic"
         }
 
-        return DevicePerformanceSnapshot(
+        DevicePerformanceSnapshot(
             levelLabel = level,
             score = score,
             cores = cores,
@@ -108,10 +125,23 @@ object DeviceStatusReader {
                 "Device is suitable for balanced battery backup and smooth performance tuning."
             },
         )
+    }.getOrElse {
+        DevicePerformanceSnapshot(
+            levelLabel = "Unknown",
+            score = 0,
+            cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1),
+            memoryClassMb = 0,
+            isLowRam = false,
+            androidVersion = "Android ${Build.VERSION.RELEASE} / API ${Build.VERSION.SDK_INT}",
+            summary = "Performance status could not be read on this ROM. The dashboard remains available.",
+        )
     }
 
-    private fun readCapacityEstimate(context: Context): String {
-        val batteryManager = context.getSystemService(BatteryManager::class.java)
+    private fun Intent?.readIntExtra(name: String, fallback: Int): Int =
+        this?.getIntExtra(name, fallback) ?: fallback
+
+    private fun readCapacityEstimate(context: Context): String = runCatching {
+        val batteryManager = context.getSystemService(BatteryManager::class.java) ?: return "Unknown"
         val chargeCounterMicroAh = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
         val capacityPercent = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
 
@@ -121,8 +151,8 @@ object DeviceStatusReader {
 
         val currentMah = chargeCounterMicroAh / 1000f
         val estimatedFullMah = (currentMah * 100f) / capacityPercent
-        return "${estimatedFullMah.roundToInt()} mAh est."
-    }
+        "${estimatedFullMah.roundToInt()} mAh est."
+    }.getOrDefault("Unknown")
 
     private fun batterySummary(health: Int, status: Int, levelPercent: Int): String = when {
         health == BatteryManager.BATTERY_HEALTH_GOOD && levelPercent >= 20 ->
@@ -138,7 +168,7 @@ object DeviceStatusReader {
         levelPercent in 0..15 ->
             "Low battery. Standard refresh rate and battery mode are recommended."
         else ->
-            "Battery status is available. Enable LSPosed scope for drain reduction."
+            "Battery status is available. Enable recommended scope for drain reduction."
     }
 
     private fun batteryHealthLabel(health: Int): String = when (health) {
