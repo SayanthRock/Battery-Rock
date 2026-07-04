@@ -139,7 +139,8 @@ fun BatteryRockScreen(isActive: Boolean) {
                     subtitle = "Use RAM pressure and internal storage headroom to choose a safer tuning style.",
                     selected = ramRomMode,
                     options = listOf(
-                        ModeOption("Safe battery profile", "Low-RAM or tight-storage friendly"),
+                        ModeOption("Safe battery profile", "Low-RAM friendly mode"),
+                        ModeOption("Clean storage + Safe profile", "Tight-storage recovery mode"),
                         ModeOption("Balanced daily profile", "Stable mode for normal use"),
                         ModeOption("Smooth balanced profile", "Good balance for modern phones"),
                         ModeOption("Performance profile", "For devices with healthy RAM and ROM headroom")
@@ -383,7 +384,7 @@ fun OptimizationProfileCard(performanceLevel: DevicePerformanceSnapshot) {
                     lineHeight = 17.sp
                 )
                 Text(
-                    "RAM load ${performanceLevel.ramLoadPercent}% · ROM used ${performanceLevel.storageUsedPercent}%",
+                    text = performanceLevel.loadSummary(),
                     color = TextMuted,
                     fontSize = 11.sp,
                     lineHeight = 16.sp
@@ -391,6 +392,12 @@ fun OptimizationProfileCard(performanceLevel: DevicePerformanceSnapshot) {
             }
         }
     }
+}
+
+private fun DevicePerformanceSnapshot.loadSummary(): String {
+    val ram = if (ramLoadPercent > 0) "RAM load $ramLoadPercent%" else "RAM load unknown"
+    val rom = if (storageUsedPercent > 0) "ROM used $storageUsedPercent%" else "ROM used unknown"
+    return "$ram · $rom"
 }
 
 @Composable
