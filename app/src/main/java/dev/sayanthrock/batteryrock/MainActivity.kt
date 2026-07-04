@@ -321,7 +321,7 @@ private fun BatteryHealthSnapshot.minutesToFullText(): String = when {
 
 private fun openBatterySettings(context: Context) {
     runCatching {
-        context.startActivity(Intent(Settings.ACTION_POWER_USAGE_SUMMARY).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        context.startActivity(Intent("android.intent.action.POWER_USAGE_SUMMARY").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }.recoverCatching {
         context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }.recoverCatching {
