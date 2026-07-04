@@ -1,6 +1,9 @@
 package dev.sayanthrock.batteryrock
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,7 +13,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -70,22 +72,20 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun BatteryRockScreen(isActive: Boolean) {
     val context = LocalContext.current
-    val batteryHealth = remember { DeviceStatusReader.readBatteryHealth(context) }
-    val performanceLevel = remember { DeviceStatusReader.readPerformanceLevel(context) }
+    var refreshTick by remember { mutableStateOf(0) }
+    var config by remember { mutableStateOf(BatteryRockConfigStore.read(context)) }
+    val batteryHealth = remember(refreshTick) { DeviceStatusReader.readBatteryHealth(context) }
+    val performanceLevel = remember(refreshTick) { DeviceStatusReader.readPerformanceLevel(context) }
 
-    var batteryMode by remember { mutableStateOf("Balanced") }
-    var performanceMode by remember { mutableStateOf(recommendedUiPerformanceMode(performanceLevel.score)) }
-    var refreshRateMode by remember { mutableStateOf("Auto-select") }
-    var ramRomMode by remember { mutableStateOf(performanceLevel.recommendedProfile) }
+    fun saveConfig(next: BatteryRockConfig) {
+        BatteryRockConfigStore.save(context, next)
+        config = next
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Midnight, Ink, Color(0xFF111827))
-                )
-            )
+            .background(Brush.verticalGradient(listOf(Midnight, Ink, Color(0xFF111827))))
     ) {
         LazyColumn(
             modifier = Modifier
@@ -103,41 +103,52 @@ fun BatteryRockScreen(isActive: Boolean) {
             item { DeviceDashboardCard(batteryHealth, performanceLevel) }
             item { OptimizationProfileCard(performanceLevel) }
 
+            item { SectionLabel("Charging care") }
+            item {
+                ChargingCareCard(
+                    batteryHealth = batteryHealth,
+                    config = config,
+                    onToggleCare = { saveConfig(config.copy(batteryCare80 = !config.batteryCare80)) },
+                    onOpenBatterySettings = { openBatterySettings(context) },
+                    onRefresh = { refreshTick++ }
+                )
+            }
+
             item { SectionLabel("Smart controls") }
             item {
                 ModeSelectorCard(
                     badge = "BAT",
                     title = "Battery Backup",
-                    subtitle = "Choose a balanced profile for day-to-day battery backup.",
-                    selected = batteryMode,
+                    subtitle = "Saved profile for daily battery behavior.",
+                    selected = config.batteryMode,
                     options = listOf(
                         ModeOption("Safe", "Gentle daily settings"),
                         ModeOption("Balanced", "Best default profile"),
-                        ModeOption("Advanced", "Stronger background limits")
+                        ModeOption("Advanced", "Stronger background guidance")
                     ),
-                    onSelected = { batteryMode = it }
+                    onSelected = { saveConfig(config.copy(batteryMode = it)) }
                 )
             }
             item {
                 ModeSelectorCard(
                     badge = "CPU",
                     title = "Phone Performance",
-                    subtitle = "Match smoothness to the real performance score instead of random guesswork.",
-                    selected = performanceMode,
+                    subtitle = "Saved smoothness profile based on real device status.",
+                    selected = config.performanceMode,
                     options = listOf(
                         ModeOption("Standard", "Stable everyday behavior"),
                         ModeOption("Smooth", "Better scrolling feel"),
                         ModeOption("Performance", "For heavier use")
                     ),
-                    onSelected = { performanceMode = it }
+                    onSelected = { saveConfig(config.copy(performanceMode = it)) }
                 )
             }
             item {
                 ModeSelectorCard(
                     badge = "ROM",
                     title = "RAM / ROM Profile",
-                    subtitle = "Use RAM pressure and internal storage headroom to choose a safer tuning style.",
-                    selected = ramRomMode,
+                    subtitle = "Saved RAM and storage profile with clear status feedback.",
+                    selected = config.ramRomMode,
                     options = listOf(
                         ModeOption("Safe battery profile", "Low-RAM friendly mode"),
                         ModeOption("Clean storage + Safe profile", "Tight-storage recovery mode"),
@@ -145,21 +156,21 @@ fun BatteryRockScreen(isActive: Boolean) {
                         ModeOption("Smooth balanced profile", "Good balance for modern phones"),
                         ModeOption("Performance profile", "For devices with healthy RAM and ROM headroom")
                     ),
-                    onSelected = { ramRomMode = it }
+                    onSelected = { saveConfig(config.copy(ramRomMode = it)) }
                 )
             }
             item {
                 ModeSelectorCard(
                     badge = "HZ",
                     title = "Refresh Rate",
-                    subtitle = "Pick a display behavior that matches battery or smoothness needs.",
-                    selected = refreshRateMode,
+                    subtitle = "Saved display preference for the selected profile.",
+                    selected = config.refreshRateMode,
                     options = listOf(
                         ModeOption("Auto-select", "Let the phone choose"),
                         ModeOption("High", "Smoother animations"),
                         ModeOption("Standard", "Battery-first display mode")
                     ),
-                    onSelected = { refreshRateMode = it }
+                    onSelected = { saveConfig(config.copy(refreshRateMode = it)) }
                 )
             }
 
@@ -169,18 +180,9 @@ fun BatteryRockScreen(isActive: Boolean) {
             item { SectionLabel("Supported brands") }
             items(SUPPORTED_BRANDS) { BrandChip(it) }
 
-            item { SectionLabel("Target packages") }
-            items(TARGETED_PACKAGES) { PackageChip(it) }
-
             item { FooterNote() }
         }
     }
-}
-
-private fun recommendedUiPerformanceMode(score: Int): String = when {
-    score >= 80 -> "Performance"
-    score >= 60 -> "Smooth"
-    else -> "Standard"
 }
 
 @Composable
@@ -190,18 +192,14 @@ fun HeroCard(isActive: Boolean) {
     val subtitle = if (isActive) {
         "Module status bridge is active. Dashboard controls are available."
     } else {
-        "Dashboard is safe to open. Enable module setup only when needed."
+        "Dashboard is safe to open. Use Battery settings for phone charging options."
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(28.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(Color(0xFF141A33), Color(0xFF0B1224), Color(0xFF101827))
-                )
-            )
+            .background(Brush.linearGradient(listOf(Color(0xFF141A33), Color(0xFF0B1224), Color(0xFF101827))))
             .border(1.dp, Color(0x2FFFFFFF), RoundedCornerShape(28.dp))
             .padding(20.dp)
     ) {
@@ -211,186 +209,99 @@ fun HeroCard(isActive: Boolean) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("Battery-Rock", color = TextPrimary, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(2.dp))
-                Text("Battery health · RAM · ROM · Performance", color = TextSecondary, fontSize = 13.sp)
+                Text("Battery health · Charging care · RAM · ROM", color = TextSecondary, fontSize = 13.sp)
             }
             StatusBadge(label = activeLabel, color = activeColor)
         }
-
         Spacer(Modifier.height(18.dp))
-        Text(
-            text = subtitle,
-            color = TextSecondary,
-            fontSize = 13.sp,
-            lineHeight = 19.sp
-        )
-
+        Text(text = subtitle, color = TextSecondary, fontSize = 13.sp, lineHeight = 19.sp)
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            TinyInfoCard("ROM", "OPPO · Realme", Indigo, Modifier.weight(1f))
-            TinyInfoCard("RAM", "Pressure scan", Cyan, Modifier.weight(1f))
+            TinyInfoCard("CARE", "80% option", Indigo, Modifier.weight(1f))
+            TinyInfoCard("CHARGE", "Time estimate", Cyan, Modifier.weight(1f))
             TinyInfoCard("APK", BuildConfig.VERSION_NAME, Green, Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-fun QuickStatusStrip(
-    batteryHealth: BatteryHealthSnapshot,
-    performanceLevel: DevicePerformanceSnapshot,
-) {
+fun QuickStatusStrip(batteryHealth: BatteryHealthSnapshot, performanceLevel: DevicePerformanceSnapshot) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MiniStatCard(
-                title = "Battery",
-                value = if (batteryHealth.levelPercent >= 0) "${batteryHealth.levelPercent}%" else "--",
-                color = Green,
-                modifier = Modifier.weight(1f)
-            )
-            MiniStatCard(
-                title = "Health",
-                value = batteryHealth.healthLabel,
-                color = Indigo,
-                modifier = Modifier.weight(1f)
-            )
-            MiniStatCard(
-                title = "Score",
-                value = "${performanceLevel.score}",
-                color = Cyan,
-                modifier = Modifier.weight(1f)
-            )
+            MiniStatCard("Battery", if (batteryHealth.levelPercent >= 0) "${batteryHealth.levelPercent}%" else "--", Green, Modifier.weight(1f))
+            MiniStatCard("Charging", batteryHealth.minutesToFullText(), Cyan, Modifier.weight(1f))
+            MiniStatCard("Health", batteryHealth.healthLabel, Indigo, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MiniStatCard(
-                title = "RAM",
-                value = if (performanceLevel.ramLoadPercent > 0) "${performanceLevel.ramLoadPercent}%" else "--",
-                color = Amber,
-                modifier = Modifier.weight(1f)
-            )
-            MiniStatCard(
-                title = "ROM",
-                value = if (performanceLevel.storageUsedPercent > 0) "${performanceLevel.storageUsedPercent}%" else "--",
-                color = Green,
-                modifier = Modifier.weight(1f)
-            )
+            MiniStatCard("RAM", if (performanceLevel.ramLoadPercent > 0) "${performanceLevel.ramLoadPercent}%" else "--", Amber, Modifier.weight(1f))
+            MiniStatCard("ROM", if (performanceLevel.storageUsedPercent > 0) "${performanceLevel.storageUsedPercent}%" else "--", Green, Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-fun DeviceDashboardCard(
+fun DeviceDashboardCard(batteryHealth: BatteryHealthSnapshot, performanceLevel: DevicePerformanceSnapshot) {
+    GlassCard {
+        HeaderRow("LIVE", "Device status", "Battery, RAM, ROM and performance readings with safe fallback values.", Green)
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MetricTile("Battery", if (batteryHealth.levelPercent >= 0) "${batteryHealth.levelPercent}%" else "Unknown", batteryHealth.statusLabel, Green, Modifier.weight(1f))
+            MetricTile("Full charge", batteryHealth.minutesToFullText(), "Estimate shown while charging", Cyan, Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MetricTile("Temp", batteryHealth.temperatureC, "${batteryHealth.powerSource} · ${batteryHealth.capacityEstimate}", Amber, Modifier.weight(1f))
+            MetricTile("Performance", performanceLevel.levelLabel, "${performanceLevel.score}/100 · ${performanceLevel.cores} cores", Cyan, Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MetricTile("RAM", performanceLevel.ramPressureLabel, "${performanceLevel.availableRam} free · ${performanceLevel.totalRam} total", Indigo, Modifier.weight(1f))
+            MetricTile("ROM", performanceLevel.storagePressureLabel, "${performanceLevel.storageFree} free · ${performanceLevel.storageTotal} total", Green, Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(14.dp))
+        Text(batteryHealth.summary, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+    }
+}
+
+@Composable
+fun ChargingCareCard(
     batteryHealth: BatteryHealthSnapshot,
-    performanceLevel: DevicePerformanceSnapshot,
+    config: BatteryRockConfig,
+    onToggleCare: () -> Unit,
+    onOpenBatterySettings: () -> Unit,
+    onRefresh: () -> Unit,
 ) {
     GlassCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            BadgeBox(text = "LIVE", color = Green)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Device status", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    "Clean battery, RAM, ROM and performance overview with safe fallback values.",
-                    color = TextSecondary,
-                    fontSize = 12.sp,
-                    lineHeight = 17.sp
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MetricTile(
-                label = "Battery",
-                value = if (batteryHealth.levelPercent >= 0) "${batteryHealth.levelPercent}%" else "Unknown",
-                detail = batteryHealth.statusLabel,
-                accent = Green,
-                modifier = Modifier.weight(1f)
-            )
-            MetricTile(
-                label = "Health",
-                value = batteryHealth.healthLabel,
-                detail = batteryHealth.summary,
-                accent = Indigo,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
+        HeaderRow(
+            badge = "80",
+            title = "80% Battery Care",
+            subtitle = "Status: ${if (config.batteryCare80) "On" else "Off"} · ${batteryHealth.minutesToFullText()}",
+            color = if (config.batteryCare80) Green else Amber
+        )
         Spacer(Modifier.height(10.dp))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MetricTile(
-                label = "Temp",
-                value = batteryHealth.temperatureC,
-                detail = "${batteryHealth.powerSource} · ${batteryHealth.capacityEstimate}",
-                accent = Amber,
-                modifier = Modifier.weight(1f)
-            )
-            MetricTile(
-                label = "Performance",
-                value = performanceLevel.levelLabel,
-                detail = "${performanceLevel.score}/100 · ${performanceLevel.cores} cores",
-                accent = Cyan,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(Modifier.height(10.dp))
-
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MetricTile(
-                label = "RAM",
-                value = performanceLevel.ramPressureLabel,
-                detail = "${performanceLevel.availableRam} free · ${performanceLevel.totalRam} total",
-                accent = Indigo,
-                modifier = Modifier.weight(1f)
-            )
-            MetricTile(
-                label = "ROM",
-                value = performanceLevel.storagePressureLabel,
-                detail = "${performanceLevel.storageFree} free · ${performanceLevel.storageTotal} total",
-                accent = Green,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(Modifier.height(14.dp))
-        Text(performanceLevel.summary, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
-        Spacer(Modifier.height(3.dp))
         Text(
-            text = "${performanceLevel.androidVersion} · App memory ${performanceLevel.memoryClassMb}/${performanceLevel.largeMemoryClassMb} MB",
+            "Battery-Rock saves your 80% care choice and opens the real phone Battery settings. Actual charging control depends on the phone ROM option.",
             color = TextMuted,
             fontSize = 11.sp,
             lineHeight = 16.sp
         )
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ActionButton(if (config.batteryCare80) "80% care ON" else "80% care OFF", if (config.batteryCare80) Green else Amber, Modifier.weight(1f), onToggleCare)
+            ActionButton("Refresh", Cyan, Modifier.weight(1f), onRefresh)
+        }
+        Spacer(Modifier.height(10.dp))
+        ActionButton("Open Battery settings", Indigo, Modifier.fillMaxWidth(), onOpenBatterySettings)
     }
 }
 
 @Composable
 fun OptimizationProfileCard(performanceLevel: DevicePerformanceSnapshot) {
     GlassCard {
-        Row(verticalAlignment = Alignment.Top) {
-            BadgeBox(text = "OPT", color = Cyan)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Recommended profile", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                Spacer(Modifier.height(3.dp))
-                Text(performanceLevel.recommendedProfile, color = Cyan, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "ROM: ${performanceLevel.romName}",
-                    color = TextSecondary,
-                    fontSize = 12.sp,
-                    lineHeight = 17.sp
-                )
-                Text(
-                    text = performanceLevel.loadSummary(),
-                    color = TextMuted,
-                    fontSize = 11.sp,
-                    lineHeight = 16.sp
-                )
-            }
-        }
+        HeaderRow("OPT", "Recommended profile", performanceLevel.recommendedProfile, Cyan)
+        Spacer(Modifier.height(8.dp))
+        Text("ROM: ${performanceLevel.romName}", color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+        Text(performanceLevel.loadSummary(), color = TextMuted, fontSize = 11.sp, lineHeight = 16.sp)
     }
 }
 
@@ -400,14 +311,38 @@ private fun DevicePerformanceSnapshot.loadSummary(): String {
     return "$ram · $rom"
 }
 
+private fun BatteryHealthSnapshot.minutesToFullText(): String = when {
+    statusLabel == "Full" || levelPercent >= 100 -> "Full"
+    statusLabel != "Charging" -> "Not charging"
+    levelPercent < 0 -> "Unknown"
+    else -> "${((100 - levelPercent).coerceIn(0, 100) * 2).coerceAtLeast(1)} min"
+}
+
+private fun openBatterySettings(context: Context) {
+    runCatching {
+        context.startActivity(Intent(Settings.ACTION_POWER_USAGE_SUMMARY).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }.recoverCatching {
+        context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }.recoverCatching {
+        context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+}
+
 @Composable
-fun MetricTile(
-    label: String,
-    value: String,
-    detail: String,
-    accent: Color,
-    modifier: Modifier = Modifier,
-) {
+fun HeaderRow(badge: String, title: String, subtitle: String, color: Color) {
+    Row(verticalAlignment = Alignment.Top) {
+        BadgeBox(text = badge, color = color)
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            Spacer(Modifier.height(3.dp))
+            Text(subtitle, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+        }
+    }
+}
+
+@Composable
+fun MetricTile(label: String, value: String, detail: String, accent: Color, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(18.dp))
@@ -426,58 +361,31 @@ fun MetricTile(
 data class ImprovementItem(val badge: String, val title: String, val detail: String)
 
 val IMPROVEMENT_ITEMS = listOf(
-    ImprovementItem("BAT", "Battery Backup", "Tracks idle drain, charging status, temperature and useful power details."),
+    ImprovementItem("BAT", "Charging Time", "Shows estimated minutes to full while the device is charging."),
+    ImprovementItem("80", "Battery Care", "Adds a saved 80% care option and Battery settings shortcut."),
     ImprovementItem("RAM", "RAM Pressure", "Reads real available RAM and load percentage without extra permissions."),
     ImprovementItem("ROM", "ROM Storage", "Shows internal storage free space, used percentage and safety status."),
     ImprovementItem("CPU", "Performance Level", "Combines CPU cores, Android API, RAM, storage and memory class into one score."),
-    ImprovementItem("SAFE", "Crash-safe UI", "The dashboard uses fallback values when a ROM hides device data."),
-    ImprovementItem("OEM", "Brand Profiles", "Designed around ColorOS, OxygenOS and Realme UI style expectations.")
+    ImprovementItem("SAFE", "Clear Controls", "Uses Android Battery settings for phone options that the APK cannot directly change.")
 )
 
 @Composable
 fun ImprovementCard(item: ImprovementItem) {
     GlassCard {
-        Row(verticalAlignment = Alignment.Top) {
-            BadgeBox(text = item.badge, color = Green)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                Spacer(Modifier.height(3.dp))
-                Text(item.detail, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
-            }
-        }
+        HeaderRow(item.badge, item.title, item.detail, Green)
     }
 }
 
 data class ModeOption(val label: String, val detail: String)
 
 @Composable
-fun ModeSelectorCard(
-    badge: String,
-    title: String,
-    subtitle: String,
-    selected: String,
-    options: List<ModeOption>,
-    onSelected: (String) -> Unit,
-) {
+fun ModeSelectorCard(badge: String, title: String, subtitle: String, selected: String, options: List<ModeOption>, onSelected: (String) -> Unit) {
     GlassCard {
-        Row(verticalAlignment = Alignment.Top) {
-            BadgeBox(text = badge, color = Indigo)
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                Spacer(Modifier.height(3.dp))
-                Text(subtitle, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
-                Spacer(Modifier.height(12.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    options.forEach { option ->
-                        ModePill(
-                            option = option,
-                            selected = selected == option.label,
-                            onClick = { onSelected(option.label) }
-                        )
-                    }
-                }
+        HeaderRow(badge, title, subtitle, Indigo)
+        Spacer(Modifier.height(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            options.forEach { option ->
+                ModePill(option = option, selected = selected == option.label, onClick = { onSelected(option.label) })
             }
         }
     }
@@ -487,7 +395,6 @@ fun ModeSelectorCard(
 fun ModePill(option: ModeOption, selected: Boolean, onClick: () -> Unit) {
     val borderColor = if (selected) Indigo else BorderSoft
     val bgColor = if (selected) Indigo.copy(alpha = 0.16f) else Color(0x08FFFFFF)
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -498,11 +405,7 @@ fun ModePill(option: ModeOption, selected: Boolean, onClick: () -> Unit) {
             .padding(horizontal = 13.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(9.dp)
-                .background(if (selected) Indigo else TextMuted, CircleShape)
-        )
+        Box(modifier = Modifier.size(9.dp).background(if (selected) Indigo else TextMuted, CircleShape))
         Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(option.label, color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 13.sp)
@@ -511,56 +414,36 @@ fun ModePill(option: ModeOption, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
+@Composable
+fun ActionButton(text: String, color: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(color.copy(alpha = 0.14f))
+            .border(1.dp, color.copy(alpha = 0.28f), RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+    }
+}
+
 val SUPPORTED_BRANDS = listOf(
-    "OPPO" to "ColorOS friendly RAM, ROM and performance profile",
-    "OnePlus" to "OxygenOS battery and smoothness profile",
-    "Realme" to "Realme UI device status profile"
+    "OPPO" to "ColorOS battery and charging settings shortcut",
+    "OnePlus" to "OxygenOS battery and charging settings shortcut",
+    "Realme" to "Realme UI battery and charging settings shortcut"
 )
 
 @Composable
 fun BrandChip(brand: Pair<String, String>) {
     GlassCard(padded = false) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             BadgeDot(color = Green)
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(brand.first, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 Text(brand.second, color = TextMuted, fontSize = 11.sp, lineHeight = 15.sp)
-            }
-        }
-    }
-}
-
-val TARGETED_PACKAGES = listOf(
-    "com.oplus.onetrace" to "Telemetry service",
-    "com.oplus.appsense" to "Usage analytics",
-    "com.oplus.powermonitor" to "Power monitor",
-    "com.oplus.logkit" to "Log tools",
-    "com.oplus.olc" to "OPLUS log center",
-    "com.debug.loggerui" to "Logger UI",
-    "com.oplus.sau" to "System app updater",
-    "com.oplus.romupdate" to "ROM update service",
-    "com.nearme.instant.platform" to "Instant platform",
-    "com.oplus.appplatform" to "OPLUS app platform",
-    "com.realme.systemservice" to "Realme service",
-    "com.oneplus.statistics" to "OnePlus statistics"
-)
-
-@Composable
-fun PackageChip(pkg: Pair<String, String>) {
-    GlassCard(padded = false) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BadgeDot(color = Indigo)
-            Spacer(Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(pkg.first, color = Color(0xFFD1D5DB), fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                Text(pkg.second, color = TextMuted, fontSize = 11.sp)
             }
         }
     }
@@ -612,9 +495,7 @@ fun MiniStatCard(title: String, value: String, color: Color, modifier: Modifier 
 @Composable
 fun FooterNote() {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 6.dp, bottom = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("Battery-Rock v${BuildConfig.VERSION_NAME}", color = TextMuted, fontSize = 11.sp)
@@ -674,9 +555,5 @@ fun BadgeBox(text: String, color: Color) {
 
 @Composable
 fun BadgeDot(color: Color) {
-    Box(
-        modifier = Modifier
-            .size(8.dp)
-            .background(color, CircleShape)
-    )
+    Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
 }
