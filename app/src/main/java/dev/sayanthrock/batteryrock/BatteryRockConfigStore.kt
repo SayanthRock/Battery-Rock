@@ -7,6 +7,7 @@ data class BatteryRockConfig(
     val performanceMode: String = BatteryRockConfigStore.DEFAULT_PERFORMANCE_MODE,
     val ramRomMode: String = BatteryRockConfigStore.DEFAULT_RAM_ROM_MODE,
     val refreshRateMode: String = BatteryRockConfigStore.DEFAULT_REFRESH_RATE_MODE,
+    val batteryCare80: Boolean = false,
     val lastAppliedAtMillis: Long = 0L,
 )
 
@@ -22,6 +23,7 @@ object BatteryRockConfigStore {
     private const val KEY_PERFORMANCE_MODE = "performance_mode"
     private const val KEY_RAM_ROM_MODE = "ram_rom_mode"
     private const val KEY_REFRESH_RATE_MODE = "refresh_rate_mode"
+    private const val KEY_BATTERY_CARE_80 = "battery_care_80"
     private const val KEY_LAST_APPLIED_AT = "last_applied_at"
 
     fun read(context: Context): BatteryRockConfig {
@@ -31,6 +33,7 @@ object BatteryRockConfigStore {
             performanceMode = prefs.getString(KEY_PERFORMANCE_MODE, DEFAULT_PERFORMANCE_MODE) ?: DEFAULT_PERFORMANCE_MODE,
             ramRomMode = prefs.getString(KEY_RAM_ROM_MODE, DEFAULT_RAM_ROM_MODE) ?: DEFAULT_RAM_ROM_MODE,
             refreshRateMode = prefs.getString(KEY_REFRESH_RATE_MODE, DEFAULT_REFRESH_RATE_MODE) ?: DEFAULT_REFRESH_RATE_MODE,
+            batteryCare80 = prefs.getBoolean(KEY_BATTERY_CARE_80, false),
             lastAppliedAtMillis = prefs.getLong(KEY_LAST_APPLIED_AT, 0L),
         )
     }
@@ -42,6 +45,7 @@ object BatteryRockConfigStore {
             .putString(KEY_PERFORMANCE_MODE, config.performanceMode)
             .putString(KEY_RAM_ROM_MODE, config.ramRomMode)
             .putString(KEY_REFRESH_RATE_MODE, config.refreshRateMode)
+            .putBoolean(KEY_BATTERY_CARE_80, config.batteryCare80)
             .putLong(KEY_LAST_APPLIED_AT, config.lastAppliedAtMillis)
             .apply()
     }
