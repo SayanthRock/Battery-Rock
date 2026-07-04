@@ -46,7 +46,6 @@ import dev.sayanthrock.batteryrock.ui.theme.BatteryRockTheme
 private val Midnight = Color(0xFF05060A)
 private val Ink = Color(0xFF0B1020)
 private val Glass = Color(0x12FFFFFF)
-private val GlassStrong = Color(0x1FFFFFFF)
 private val BorderSoft = Color(0x1FFFFFFF)
 private val TextPrimary = Color(0xFFF8FAFC)
 private val TextSecondary = Color(0xFFA7B0C0)
@@ -55,7 +54,6 @@ private val Indigo = Color(0xFF818CF8)
 private val Cyan = Color(0xFF38BDF8)
 private val Green = Color(0xFF22C55E)
 private val Amber = Color(0xFFF59E0B)
-private val Red = Color(0xFFEF4444)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,8 +74,9 @@ fun BatteryRockScreen(isActive: Boolean) {
     val performanceLevel = remember { DeviceStatusReader.readPerformanceLevel(context) }
 
     var batteryMode by remember { mutableStateOf("Balanced") }
-    var performanceMode by remember { mutableStateOf("Standard") }
+    var performanceMode by remember { mutableStateOf(recommendedUiPerformanceMode(performanceLevel.score)) }
     var refreshRateMode by remember { mutableStateOf("Auto-select") }
+    var ramRomMode by remember { mutableStateOf(performanceLevel.recommendedProfile) }
 
     Box(
         modifier = Modifier
@@ -102,6 +101,7 @@ fun BatteryRockScreen(isActive: Boolean) {
 
             item { SectionLabel("Live dashboard") }
             item { DeviceDashboardCard(batteryHealth, performanceLevel) }
+            item { OptimizationProfileCard(performanceLevel) }
 
             item { SectionLabel("Smart controls") }
             item {
@@ -111,7 +111,7 @@ fun BatteryRockScreen(isActive: Boolean) {
                     subtitle = "Choose a balanced profile for day-to-day battery backup.",
                     selected = batteryMode,
                     options = listOf(
-                        ModeOption("Safe", "Gentle settings for daily use"),
+                        ModeOption("Safe", "Gentle daily settings"),
                         ModeOption("Balanced", "Best default profile"),
                         ModeOption("Advanced", "Stronger background limits")
                     ),
@@ -122,7 +122,7 @@ fun BatteryRockScreen(isActive: Boolean) {
                 ModeSelectorCard(
                     badge = "CPU",
                     title = "Phone Performance",
-                    subtitle = "Keep the UI smooth while reducing unnecessary background load.",
+                    subtitle = "Match smoothness to the real performance score instead of random guesswork.",
                     selected = performanceMode,
                     options = listOf(
                         ModeOption("Standard", "Stable everyday behavior"),
@@ -130,6 +130,21 @@ fun BatteryRockScreen(isActive: Boolean) {
                         ModeOption("Performance", "For heavier use")
                     ),
                     onSelected = { performanceMode = it }
+                )
+            }
+            item {
+                ModeSelectorCard(
+                    badge = "ROM",
+                    title = "RAM / ROM Profile",
+                    subtitle = "Use RAM pressure and internal storage headroom to choose a safer tuning style.",
+                    selected = ramRomMode,
+                    options = listOf(
+                        ModeOption("Safe battery profile", "Low-RAM or tight-storage friendly"),
+                        ModeOption("Balanced daily profile", "Stable mode for normal use"),
+                        ModeOption("Smooth balanced profile", "Good balance for modern phones"),
+                        ModeOption("Performance profile", "For devices with healthy RAM and ROM headroom")
+                    ),
+                    onSelected = { ramRomMode = it }
                 )
             }
             item {
@@ -161,6 +176,12 @@ fun BatteryRockScreen(isActive: Boolean) {
     }
 }
 
+private fun recommendedUiPerformanceMode(score: Int): String = when {
+    score >= 80 -> "Performance"
+    score >= 60 -> "Smooth"
+    else -> "Standard"
+}
+
 @Composable
 fun HeroCard(isActive: Boolean) {
     val activeColor = if (isActive) Green else Amber
@@ -189,7 +210,7 @@ fun HeroCard(isActive: Boolean) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("Battery-Rock", color = TextPrimary, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(2.dp))
-                Text("Battery health · Backup · Performance", color = TextSecondary, fontSize = 13.sp)
+                Text("Battery health · RAM · ROM · Performance", color = TextSecondary, fontSize = 13.sp)
             }
             StatusBadge(label = activeLabel, color = activeColor)
         }
@@ -205,7 +226,7 @@ fun HeroCard(isActive: Boolean) {
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             TinyInfoCard("ROM", "OPPO · Realme", Indigo, Modifier.weight(1f))
-            TinyInfoCard("UI", "Premium dark", Cyan, Modifier.weight(1f))
+            TinyInfoCard("RAM", "Pressure scan", Cyan, Modifier.weight(1f))
             TinyInfoCard("APK", BuildConfig.VERSION_NAME, Green, Modifier.weight(1f))
         }
     }
@@ -216,25 +237,41 @@ fun QuickStatusStrip(
     batteryHealth: BatteryHealthSnapshot,
     performanceLevel: DevicePerformanceSnapshot,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        MiniStatCard(
-            title = "Battery",
-            value = if (batteryHealth.levelPercent >= 0) "${batteryHealth.levelPercent}%" else "--",
-            color = Green,
-            modifier = Modifier.weight(1f)
-        )
-        MiniStatCard(
-            title = "Health",
-            value = batteryHealth.healthLabel,
-            color = Indigo,
-            modifier = Modifier.weight(1f)
-        )
-        MiniStatCard(
-            title = "Score",
-            value = "${performanceLevel.score}",
-            color = Cyan,
-            modifier = Modifier.weight(1f)
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MiniStatCard(
+                title = "Battery",
+                value = if (batteryHealth.levelPercent >= 0) "${batteryHealth.levelPercent}%" else "--",
+                color = Green,
+                modifier = Modifier.weight(1f)
+            )
+            MiniStatCard(
+                title = "Health",
+                value = batteryHealth.healthLabel,
+                color = Indigo,
+                modifier = Modifier.weight(1f)
+            )
+            MiniStatCard(
+                title = "Score",
+                value = "${performanceLevel.score}",
+                color = Cyan,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MiniStatCard(
+                title = "RAM",
+                value = if (performanceLevel.ramLoadPercent > 0) "${performanceLevel.ramLoadPercent}%" else "--",
+                color = Amber,
+                modifier = Modifier.weight(1f)
+            )
+            MiniStatCard(
+                title = "ROM",
+                value = if (performanceLevel.storageUsedPercent > 0) "${performanceLevel.storageUsedPercent}%" else "--",
+                color = Green,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
@@ -251,7 +288,7 @@ fun DeviceDashboardCard(
                 Text("Device status", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "Clean battery and performance overview with safe fallback values.",
+                    "Clean battery, RAM, ROM and performance overview with safe fallback values.",
                     color = TextSecondary,
                     fontSize = 12.sp,
                     lineHeight = 17.sp
@@ -297,15 +334,62 @@ fun DeviceDashboardCard(
             )
         }
 
+        Spacer(Modifier.height(10.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MetricTile(
+                label = "RAM",
+                value = performanceLevel.ramPressureLabel,
+                detail = "${performanceLevel.availableRam} free · ${performanceLevel.totalRam} total",
+                accent = Indigo,
+                modifier = Modifier.weight(1f)
+            )
+            MetricTile(
+                label = "ROM",
+                value = performanceLevel.storagePressureLabel,
+                detail = "${performanceLevel.storageFree} free · ${performanceLevel.storageTotal} total",
+                accent = Green,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
         Spacer(Modifier.height(14.dp))
         Text(performanceLevel.summary, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
         Spacer(Modifier.height(3.dp))
         Text(
-            text = "${performanceLevel.androidVersion} · Memory class ${performanceLevel.memoryClassMb} MB",
+            text = "${performanceLevel.androidVersion} · App memory ${performanceLevel.memoryClassMb}/${performanceLevel.largeMemoryClassMb} MB",
             color = TextMuted,
             fontSize = 11.sp,
             lineHeight = 16.sp
         )
+    }
+}
+
+@Composable
+fun OptimizationProfileCard(performanceLevel: DevicePerformanceSnapshot) {
+    GlassCard {
+        Row(verticalAlignment = Alignment.Top) {
+            BadgeBox(text = "OPT", color = Cyan)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Recommended profile", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                Spacer(Modifier.height(3.dp))
+                Text(performanceLevel.recommendedProfile, color = Cyan, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "ROM: ${performanceLevel.romName}",
+                    color = TextSecondary,
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp
+                )
+                Text(
+                    "RAM load ${performanceLevel.ramLoadPercent}% · ROM used ${performanceLevel.storageUsedPercent}%",
+                    color = TextMuted,
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp
+                )
+            }
+        }
     }
 }
 
@@ -336,8 +420,10 @@ data class ImprovementItem(val badge: String, val title: String, val detail: Str
 
 val IMPROVEMENT_ITEMS = listOf(
     ImprovementItem("BAT", "Battery Backup", "Tracks idle drain, charging status, temperature and useful power details."),
+    ImprovementItem("RAM", "RAM Pressure", "Reads real available RAM and load percentage without extra permissions."),
+    ImprovementItem("ROM", "ROM Storage", "Shows internal storage free space, used percentage and safety status."),
+    ImprovementItem("CPU", "Performance Level", "Combines CPU cores, Android API, RAM, storage and memory class into one score."),
     ImprovementItem("SAFE", "Crash-safe UI", "The dashboard uses fallback values when a ROM hides device data."),
-    ImprovementItem("CPU", "Performance Level", "Summarizes phone capability with a clear score and status label."),
     ImprovementItem("OEM", "Brand Profiles", "Designed around ColorOS, OxygenOS and Realme UI style expectations.")
 )
 
@@ -418,11 +504,9 @@ fun ModePill(option: ModeOption, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
-data class HookItem(val badge: String, val title: String, val detail: String)
-
 val SUPPORTED_BRANDS = listOf(
-    "OPPO" to "ColorOS friendly dashboard profile",
-    "OnePlus" to "OxygenOS battery and performance profile",
+    "OPPO" to "ColorOS friendly RAM, ROM and performance profile",
+    "OnePlus" to "OxygenOS battery and smoothness profile",
     "Realme" to "Realme UI device status profile"
 )
 
