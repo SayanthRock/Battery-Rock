@@ -4,6 +4,24 @@ All notable Battery-Rock updates will be documented here.
 
 ---
 
+## v1.1.0
+
+### RAM ROM performance level improvement
+
+- Added real RAM diagnostics with total RAM, available RAM and RAM load percentage.
+- Added internal ROM storage diagnostics with total storage, free storage and used percentage.
+- Improved the performance score to include CPU cores, Android API, RAM, storage headroom and app memory class.
+- Added a recommended profile card for Safe, Balanced, Smooth or Performance tuning.
+- Added a RAM/ROM smart-control section in the dashboard UI.
+- Added safer fallback values when a ROM hides memory, storage or system-property details.
+- Updated APK version to `1.1.0` / versionCode `11`.
+
+### Notes
+
+This update focuses on making the dashboard more useful for real device performance checking instead of judging the phone from CPU cores alone, a classic tiny tragedy of software dashboards.
+
+---
+
 ## v1.0.9
 
 ### UI UX design refresh

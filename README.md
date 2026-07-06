@@ -2,29 +2,29 @@
 
 # Battery-Rock
 
-### Battery health and performance dashboard for OPPO, Realme and OnePlus
+### Battery health, RAM/ROM status and performance dashboard for OPPO, Realme and OnePlus
 
-**Battery status · Phone performance level · Premium dark UI · APK release workflows**
+**Battery status · RAM pressure · ROM storage · Phone performance level · Premium dark UI · APK release workflows**
 
-[![Battery-Rock](https://img.shields.io/badge/Battery--Rock-v1.0.9-818CF8?style=for-the-badge&logo=android&logoColor=white)](https://github.com/SayanthRock/Battery-Rock)
+[![Battery-Rock](https://img.shields.io/badge/Battery--Rock-v1.1.0-818CF8?style=for-the-badge&logo=android&logoColor=white)](https://github.com/SayanthRock/Battery-Rock)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Android](https://img.shields.io/badge/Android-12%2B-22C55E?style=for-the-badge&logo=android)](https://developer.android.com/)
 [![Releases](https://img.shields.io/badge/GitHub-Releases-111827?style=for-the-badge&logo=github)](https://github.com/SayanthRock/Battery-Rock/releases)
 
-Battery-Rock is an Android app dashboard for battery health, charging status, temperature, estimated capacity, phone performance level and device status guidance.
+Battery-Rock is an Android app dashboard for battery health, charging status, temperature, estimated capacity, RAM pressure, internal ROM storage, phone performance level and device status guidance.
 
 </div>
 
 ---
 
-## Latest update: v1.0.9
+## Latest update: v1.1.0
 
-This update refreshes the **UI, UX, design style and theme** with a cleaner premium dark interface.
+This update improves **RAM, ROM and performance level detection** so the dashboard can show clearer device capability, storage pressure and recommended tuning profiles.
 
 | Area | Status |
 |---|---|
-| APK version | `1.0.9` |
-| Version code | `10` |
+| APK version | `1.1.0` |
+| Version code | `11` |
 | Package | `dev.sayanthrock.batteryrock` |
 | Minimum Android | Android 12 / API 31 |
 | Target SDK | Android 15 / API 35 |
@@ -35,14 +35,15 @@ This update refreshes the **UI, UX, design style and theme** with a cleaner prem
 | Automatic release workflow | Enabled |
 | Manual APK artifact workflow | Available |
 
-### What changed in v1.0.9
+### What changed in v1.1.0
 
-- Redesigned the main dashboard with a premium hero card.
-- Added quick status cards for battery, health and performance score.
-- Improved spacing, card radius, contrast and typography hierarchy.
-- Refreshed the dark theme palette with indigo, cyan, green and amber accents.
-- Updated XML colors to match the Compose theme.
-- Bumped the APK to `1.0.9` / versionCode `10`.
+- Added real RAM diagnostics with total RAM, available RAM and RAM load percentage.
+- Added internal ROM storage diagnostics with total storage, free storage and used percentage.
+- Improved the performance score to include CPU cores, Android API, RAM, storage headroom and app memory class.
+- Added a recommended profile card for Safe, Balanced, Smooth or Performance tuning.
+- Added a RAM/ROM smart-control section in the dashboard UI.
+- Added safer fallback values when a ROM hides memory, storage or system-property details.
+- Bumped the APK to `1.1.0` / versionCode `11`.
 
 ---
 
@@ -52,8 +53,11 @@ This update refreshes the **UI, UX, design style and theme** with a cleaner prem
 |---|---|
 | Battery dashboard | Shows battery percentage, charging state, health, temperature, voltage and power source. |
 | Capacity estimate | Shows estimated battery capacity when Android exposes enough data. |
-| Performance level | Calculates a simple phone performance level from CPU cores, Android API and memory class. |
-| Safe fallbacks | Shows `Unknown` instead of closing when a device hides battery or performance details. |
+| RAM pressure | Shows available RAM, total RAM and estimated RAM load. |
+| ROM storage | Shows internal storage free space, total size and used percentage. |
+| Performance level | Calculates a stronger phone performance level from CPU, Android API, RAM, ROM and memory class. |
+| Recommended profile | Suggests Safe, Balanced, Smooth or Performance profile based on live device status. |
+| Safe fallbacks | Shows `Unknown` instead of closing when a device hides battery, RAM, ROM or performance details. |
 | Premium dark UI | Gradient background, glass cards, compact quick stats and clear sections. |
 | Release automation | Builds APKs and publishes GitHub Releases automatically. |
 
@@ -70,7 +74,7 @@ https://github.com/SayanthRock/Battery-Rock/releases
 Recommended APK file name:
 
 ```text
-Battery-Rock-v1.0.9.apk
+Battery-Rock-v1.1.0.apk
 ```
 
 ---
@@ -88,13 +92,13 @@ This workflow builds the release APK and publishes a GitHub Release automaticall
 It runs when:
 
 - code is pushed to `main`
-- a tag like `v1.0.9` is pushed
+- a tag like `v1.1.0` is pushed
 - the workflow is started manually from GitHub Actions
 
 For normal pushes to `main`, the workflow creates a build tag like:
 
 ```text
-v1.0.9-build.123
+v1.1.0-build.123
 ```
 
 The release contains:
@@ -183,10 +187,10 @@ Battery-Rock/
 
 | File | Purpose |
 |---|---|
-| `MainActivity.kt` | Premium Compose dashboard UI. |
+| `MainActivity.kt` | Premium Compose dashboard UI for battery, RAM, ROM and performance status. |
 | `BatteryRockStatus.kt` | Safe status bridge for normal app startup. |
 | `BatteryRockInit.kt` | Runtime entrypoint used by supported environments. |
-| `DeviceStatusReader.kt` | Reads battery and performance data with safe fallbacks. |
+| `DeviceStatusReader.kt` | Reads battery, RAM, ROM and performance data with safe fallbacks. |
 | `ui/theme/Theme.kt` | Material color scheme and system bar styling. |
 | `auto-release-apk.yml` | Automatic build and GitHub Release workflow. |
 | `manual-release-apk.yml` | Manual APK artifact workflow. |
@@ -197,7 +201,11 @@ Battery-Rock/
 
 ### Battery-Rock keeps stopping
 
-Install v1.0.8 or newer. v1.0.9 keeps that startup fix and adds the improved UI.
+Install v1.0.8 or newer. v1.1.0 keeps that startup fix and adds RAM/ROM performance diagnostics.
+
+### RAM or ROM status shows Unknown
+
+Some ROM builds hide memory, storage or system-property values. Battery-Rock will keep the dashboard open and show fallback values instead of crashing.
 
 ### GitHub Actions build fails
 

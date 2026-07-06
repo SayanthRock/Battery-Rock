@@ -9,13 +9,15 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Optional release tag, example: v1.0.6"
+        description: "Optional release tag, example: v1.1.0"
         required: false
         type: string
 
 permissions:
   contents: write
   actions: read
+  checks: read
+  statuses: read
 
 env:
   APP_NAME: Battery-Rock

@@ -1,17 +1,30 @@
 name: Manual APK Release Build
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "gradle/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - ".github/workflows/manual-release-apk.yml"
   workflow_dispatch:
     inputs:
       release_name:
-        description: "Artifact name, example: v1.0.6"
+        description: "Artifact name, example: v1.1.0"
         required: false
-        default: "v1.0.6"
+        default: "v1.1.0"
         type: string
 
 permissions:
   contents: read
   actions: read
+  checks: read
+  pull-requests: read
+  statuses: read
 
 env:
   APP_NAME: Battery-Rock
@@ -25,6 +38,25 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Resolve artifact name
+        id: artifact
+        shell: bash
+        run: |
+          INPUT_NAME="${{ github.event.inputs.release_name || '' }}"
+          if [ -n "$INPUT_NAME" ]; then
+            NAME="$INPUT_NAME"
+          elif [ -n "${GITHUB_HEAD_REF:-}" ]; then
+            NAME="${GITHUB_HEAD_REF//\//-}"
+          else
+            NAME="${GITHUB_REF_NAME//\//-}"
+          fi
+
+          if [ -z "$NAME" ]; then
+            NAME="apk-check-${GITHUB_RUN_NUMBER}"
+          fi
+
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -149,13 +181,13 @@ jobs:
 
           cd release-artifacts
           for apk in *.apk; do
-            mv "$apk" "${APP_NAME}-${{ github.event.inputs.release_name }}.apk"
+            mv "$apk" "${APP_NAME}-${{ steps.artifact.outputs.name }}.apk"
           done
           sha256sum *.apk > SHA256SUMS.txt
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APP_NAME }}-${{ github.event.inputs.release_name }}
+          name: ${{ env.APP_NAME }}-${{ steps.artifact.outputs.name }}
           path: release-artifacts/*
           if-no-files-found: error
