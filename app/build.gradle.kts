@@ -79,3 +79,7 @@ dependencies {
     implementation(libs.androidx.material3)
     debugImplementation(libs.androidx.ui.tooling)
 }
+
+dependencies {
+    compileOnly("de.robv.android.xposed:api:82")
+}

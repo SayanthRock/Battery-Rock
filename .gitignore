@@ -16,3 +16,4 @@ local.properties
 # Xposed API jar – download separately
 app/libs/api-82.jar
 app/libs/*.jar
+app/build/
