@@ -11,18 +11,18 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val BatteryRockColors = darkColorScheme(
-    primary = Color(0xFF818CF8),
+    primary = Color(0xFFA142FF),
     onPrimary = Color(0xFF05060A),
     primaryContainer = Color(0xFF20234A),
     onPrimaryContainer = Color(0xFFE0E7FF),
-    secondary = Color(0xFF38BDF8),
+    secondary = Color(0xFF00E5FF),
     onSecondary = Color(0xFF02131F),
     secondaryContainer = Color(0xFF0B2C3F),
     tertiary = Color(0xFF22C55E),
     onTertiary = Color(0xFF03140A),
-    background = Color(0xFF05060A),
+    background = Color(0xFF0D0B14),
     onBackground = Color(0xFFF8FAFC),
-    surface = Color(0xFF0B1020),
+    surface = Color(0xFF0D0B14),
     onSurface = Color(0xFFE5E7EB),
     surfaceVariant = Color(0xFF111827),
     onSurfaceVariant = Color(0xFFA7B0C0),

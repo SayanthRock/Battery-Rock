@@ -34,6 +34,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -42,15 +44,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
-private val ScreenBackground = Color(0xFF05060A)
-private val CardBackground = Color(0xFF111827)
-private val CardBorder = Color(0x22FFFFFF)
+private val ScreenBackground = Color(0xFF0D0B14)
+private val CardBackground = Color(0x0AFFFFFF)
+private val CardBorder = Color(0x33FFFFFF)
 private val PrimaryText = Color(0xFFF8FAFC)
 private val SecondaryText = Color(0xFFA7B0C0)
 private val MutedText = Color(0xFF64748B)
 private val AccentGreen = Color(0xFF22C55E)
 private val AccentAmber = Color(0xFFF59E0B)
-private val AccentCyan = Color(0xFF38BDF8)
+private val AccentCyan = Color(0xFF00E5FF)
+private val AccentPurple = Color(0xFFA142FF)
 
 @Composable
 fun BatteryScreen(viewModel: BatteryViewModel = viewModel()) {
@@ -118,7 +121,9 @@ private fun BatteryPercentCard(state: BatteryUiState) {
     BatteryCard {
         Text(
             text = "${state.percentage}%",
-            color = PrimaryText,
+            style = TextStyle(
+                brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan))
+            ),
             fontSize = 72.sp,
             fontWeight = FontWeight.ExtraBold,
             lineHeight = 76.sp
@@ -159,7 +164,7 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
         modifier = modifier,
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
-        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp)
+        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan)))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -185,7 +190,7 @@ private fun BatteryCard(content: @Composable () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(CardBackground, RoundedCornerShape(28.dp))
-            .border(1.dp, CardBorder, RoundedCornerShape(28.dp))
+            .border(1.dp, Brush.linearGradient(listOf(AccentPurple, AccentCyan)), RoundedCornerShape(28.dp))
             .padding(24.dp),
         horizontalAlignment = Alignment.Start,
         content = { content() }
@@ -208,6 +213,7 @@ private fun ChargingIndicator(isCharging: Boolean) {
     Box(
         modifier = Modifier
             .scale(pulse)
+            .shadow(elevation = if (isCharging) 12.dp else 0.dp, spotColor = AccentGreen, shape = CircleShape)
             .size(42.dp)
             .background(if (isCharging) AccentGreen.copy(alpha = 0.18f) else Color(0x0FFFFFFF), CircleShape)
             .border(1.dp, if (isCharging) AccentGreen else CardBorder, CircleShape),
