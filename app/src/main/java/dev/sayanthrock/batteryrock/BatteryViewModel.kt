@@ -10,12 +10,10 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.update
 
 /**
  * Small MVVM state holder for Android battery data.
- * The Compose screen calls start() and stop() from DisposableEffect so the receiver is registered
- * only while the UI is visible, avoiding leaked receivers and pointless background work.
  */
 class BatteryViewModel : ViewModel() {
 
@@ -28,16 +26,33 @@ class BatteryViewModel : ViewModel() {
         if (batteryReceiver != null) return
 
         val appContext = context.applicationContext
-        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
 
-        appContext.registerReceiver(null, filter)?.let { stickyIntent ->
-            _uiState.value = stickyIntent.toBatteryUiState()
+        // Initial load of config and performance snapshot
+        val config = BatteryRockConfigStore.read(appContext)
+        val perfSnapshot = DeviceStatusReader.readPerformanceLevel(appContext)
+        val initialBatteryHealth = DeviceStatusReader.readBatteryHealth(appContext)
+
+        _uiState.update { currentState ->
+            currentState.copy(
+                config = config,
+                performanceSnapshot = perfSnapshot,
+                batteryHealthSnapshot = initialBatteryHealth
+            )
         }
 
+        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         batteryReceiver = object : BroadcastReceiver() {
             override fun onReceive(receiverContext: Context?, intent: Intent?) {
                 if (intent?.action == Intent.ACTION_BATTERY_CHANGED) {
-                    _uiState.value = intent.toBatteryUiState()
+                    // Re-read battery health because it depends on the broadcast intent.
+                    // Wait, DeviceStatusReader.readBatteryHealth registers its own receiver to get sticky intent.
+                    // To be efficient, let's just pass the intent to it, but it doesn't take an intent right now.
+                    // Let's modify DeviceStatusReader to take an intent, or we can just call readBatteryHealth which fetches the sticky intent.
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            batteryHealthSnapshot = DeviceStatusReader.readBatteryHealth(appContext, intent)
+                        )
+                    }
                 }
             }
         }
@@ -55,6 +70,15 @@ class BatteryViewModel : ViewModel() {
         batteryReceiver = null
     }
 
+    fun updateConfig(context: Context, update: (BatteryRockConfig) -> BatteryRockConfig) {
+        val appContext = context.applicationContext
+        _uiState.update { currentState ->
+            val newConfig = update(currentState.config)
+            BatteryRockConfigStore.save(appContext, newConfig)
+            currentState.copy(config = newConfig)
+        }
+    }
+
     override fun onCleared() {
         batteryReceiver = null
         super.onCleared()
@@ -62,54 +86,35 @@ class BatteryViewModel : ViewModel() {
 }
 
 data class BatteryUiState(
-    val percentage: Int = 0,
-    val status: String = "Unknown",
-    val health: String = "Unknown",
-    val temperature: String = "Unknown",
-    val technology: String = "Unknown",
-    val voltage: String = "Unknown",
-    val isCharging: Boolean = false,
+    val batteryHealthSnapshot: BatteryHealthSnapshot = BatteryHealthSnapshot(
+        levelPercent = 0,
+        statusLabel = "Unknown",
+        healthLabel = "Unknown",
+        temperatureC = "Unknown",
+        voltageMv = 0,
+        capacityEstimate = "Unknown",
+        powerSource = "Unknown",
+        summary = "Loading..."
+    ),
+    val performanceSnapshot: DevicePerformanceSnapshot = DevicePerformanceSnapshot(
+        levelLabel = "Unknown",
+        score = 0,
+        cores = 1,
+        memoryClassMb = 0,
+        largeMemoryClassMb = 0,
+        isLowRam = false,
+        totalRam = "Unknown",
+        availableRam = "Unknown",
+        ramLoadPercent = 0,
+        ramPressureLabel = "Unknown",
+        storageFree = "Unknown",
+        storageTotal = "Unknown",
+        storageUsedPercent = 0,
+        storagePressureLabel = "Unknown",
+        romName = "Unknown ROM",
+        recommendedProfile = "Balanced daily profile",
+        androidVersion = "Unknown",
+        summary = "Loading..."
+    ),
+    val config: BatteryRockConfig = BatteryRockConfig()
 )
-
-private fun Intent.toBatteryUiState(): BatteryUiState {
-    val level = getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-    val scale = getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-    val percentage = if (level >= 0 && scale > 0) {
-        ((level * 100f) / scale).roundToInt().coerceIn(0, 100)
-    } else {
-        0
-    }
-
-    val statusCode = getIntExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN)
-    val healthCode = getIntExtra(BatteryManager.EXTRA_HEALTH, BatteryManager.BATTERY_HEALTH_UNKNOWN)
-    val tempRaw = getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
-    val voltageMv = getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1)
-
-    return BatteryUiState(
-        percentage = percentage,
-        status = statusCode.toBatteryStatus(),
-        health = healthCode.toBatteryHealth(),
-        temperature = if (tempRaw != Int.MIN_VALUE) String.format("%.1f°C", tempRaw / 10f) else "Unknown",
-        technology = getStringExtra(BatteryManager.EXTRA_TECHNOLOGY)?.takeIf { it.isNotBlank() } ?: "Unknown",
-        voltage = if (voltageMv > 0) "${voltageMv} mV" else "Unknown",
-        isCharging = statusCode == BatteryManager.BATTERY_STATUS_CHARGING || statusCode == BatteryManager.BATTERY_STATUS_FULL,
-    )
-}
-
-private fun Int.toBatteryStatus(): String = when (this) {
-    BatteryManager.BATTERY_STATUS_CHARGING -> "Charging"
-    BatteryManager.BATTERY_STATUS_DISCHARGING -> "Discharging"
-    BatteryManager.BATTERY_STATUS_FULL -> "Full"
-    BatteryManager.BATTERY_STATUS_NOT_CHARGING -> "Not charging"
-    else -> "Unknown"
-}
-
-private fun Int.toBatteryHealth(): String = when (this) {
-    BatteryManager.BATTERY_HEALTH_GOOD -> "Good"
-    BatteryManager.BATTERY_HEALTH_OVERHEAT -> "Overheat"
-    BatteryManager.BATTERY_HEALTH_DEAD -> "Critical"
-    BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "Over voltage"
-    BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> "Failure"
-    BatteryManager.BATTERY_HEALTH_COLD -> "Cold"
-    else -> "Unknown"
-}
