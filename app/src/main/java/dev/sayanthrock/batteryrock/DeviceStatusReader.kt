@@ -47,9 +47,9 @@ object DeviceStatusReader {
     private const val BATTERY_PLUGGED_DOCK_COMPAT = 8
     private const val BYTES_PER_GIB = 1024L * 1024L * 1024L
 
-    fun readBatteryHealth(context: Context): BatteryHealthSnapshot = runCatching {
+    fun readBatteryHealth(context: Context, broadcastIntent: Intent? = null): BatteryHealthSnapshot = runCatching {
         val appContext = context.applicationContext
-        val intent = appContext.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val intent = broadcastIntent ?: appContext.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = intent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
         val levelPercent = if (level >= 0 && scale > 0) {
