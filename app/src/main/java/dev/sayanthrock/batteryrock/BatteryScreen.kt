@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
@@ -74,19 +72,13 @@ fun BatteryScreen(viewModel: BatteryViewModel = viewModel()) {
                 .background(Brush.verticalGradient(listOf(ScreenBackground, Color(0xFF0B1020))))
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             BatteryHeader(state)
             BatteryPercentCard(state)
             DetailGrid(state)
-            PerformanceSection(state)
-            SettingsSection(state) { updateFn ->
-                viewModel.updateConfig(context, updateFn)
-            }
             FooterNote()
-            Spacer(Modifier.height(16.dp))
         }
     }
 }
@@ -111,14 +103,14 @@ private fun BatteryHeader(state: BatteryUiState) {
                 fontSize = 13.sp
             )
         }
-        ChargingIndicator(isCharging = (state.batteryHealthSnapshot.statusLabel == "Charging" || state.batteryHealthSnapshot.statusLabel == "Full"))
+        ChargingIndicator(isCharging = state.isCharging)
     }
 }
 
 @Composable
 private fun BatteryPercentCard(state: BatteryUiState) {
     val statusColor by animateColorAsState(
-        targetValue = when (state.batteryHealthSnapshot.statusLabel) {
+        targetValue = when (state.status) {
             "Charging", "Full" -> AccentGreen
             "Discharging" -> AccentAmber
             else -> AccentCyan
@@ -128,7 +120,7 @@ private fun BatteryPercentCard(state: BatteryUiState) {
 
     BatteryCard {
         Text(
-            text = "${state.batteryHealthSnapshot.levelPercent}%",
+            text = "${state.percentage}%",
             style = TextStyle(
                 brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan))
             ),
@@ -138,14 +130,14 @@ private fun BatteryPercentCard(state: BatteryUiState) {
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = state.batteryHealthSnapshot.statusLabel,
+            text = state.status,
             color = statusColor,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = state.batteryHealthSnapshot.summary,
+            text = "Health: ${state.health}",
             color = SecondaryText,
             fontSize = 13.sp
         )
@@ -156,16 +148,12 @@ private fun BatteryPercentCard(state: BatteryUiState) {
 private fun DetailGrid(state: BatteryUiState) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Health", state.batteryHealthSnapshot.healthLabel, Modifier.weight(1f))
-            StatCard("Temperature", state.batteryHealthSnapshot.temperatureC, Modifier.weight(1f))
+            StatCard("Health", state.health, Modifier.weight(1f))
+            StatCard("Temperature", state.temperature, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Power Source", state.batteryHealthSnapshot.powerSource, Modifier.weight(1f))
-            StatCard("Voltage", "${state.batteryHealthSnapshot.voltageMv} mV", Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Est. Capacity", state.batteryHealthSnapshot.capacityEstimate, Modifier.weight(1f))
-            StatCard("Status", state.batteryHealthSnapshot.statusLabel, Modifier.weight(1f))
+            StatCard("Technology", state.technology, Modifier.weight(1f))
+            StatCard("Voltage", state.voltage, Modifier.weight(1f))
         }
     }
 }
@@ -248,117 +236,4 @@ private fun FooterNote() {
         fontSize = 11.sp,
         modifier = Modifier.padding(top = 4.dp)
     )
-}
-
-@Composable
-private fun PerformanceSection(state: BatteryUiState) {
-    val perf = state.performanceSnapshot
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = "Device Performance",
-            color = PrimaryText,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("RAM Load", "${perf.ramLoadPercent}% (${perf.ramPressureLabel})", Modifier.weight(1f))
-            StatCard("ROM Used", "${perf.storageUsedPercent}% (${perf.storagePressureLabel})", Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("RAM Free", "${perf.availableRam} / ${perf.totalRam}", Modifier.weight(1f))
-            StatCard("ROM Free", "${perf.storageFree} / ${perf.storageTotal}", Modifier.weight(1f))
-        }
-        BatteryCard {
-            Text(
-                text = "Performance Score: ${perf.score}",
-                color = AccentCyan,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Level: ${perf.levelLabel} | Cores: ${perf.cores}",
-                color = SecondaryText,
-                fontSize = 13.sp
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Recommendation: ${perf.recommendedProfile}",
-                color = AccentGreen,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
-}
-
-@Composable
-private fun SettingsSection(state: BatteryUiState, onConfigUpdate: ( (BatteryRockConfig) -> BatteryRockConfig ) -> Unit) {
-    val config = state.config
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = "Smart Controls",
-            color = PrimaryText,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
-        )
-
-        BatteryCard {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                SettingsToggle(
-                    label = "Battery Care 80%",
-                    description = "Limits charging to 80% to prolong battery lifespan.",
-                    checked = config.batteryCare80,
-                    onCheckedChange = { checked ->
-                        onConfigUpdate { it.copy(batteryCare80 = checked) }
-                    }
-                )
-
-                // Example of mode display. For a real app, these would be dropdowns or segmented buttons.
-                // Keeping it simple as read-only or clickable rows for now.
-                SettingsRow("Battery Mode", config.batteryMode)
-                SettingsRow("Performance Mode", config.performanceMode)
-                SettingsRow("RAM/ROM Profile", config.ramRomMode)
-                SettingsRow("Refresh Rate", config.refreshRateMode)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsToggle(label: String, description: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, color = PrimaryText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Text(text = description, color = SecondaryText, fontSize = 12.sp)
-        }
-        androidx.compose.material3.Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = androidx.compose.material3.SwitchDefaults.colors(
-                checkedThumbColor = PrimaryText,
-                checkedTrackColor = AccentGreen,
-                uncheckedThumbColor = SecondaryText,
-                uncheckedTrackColor = CardBorder
-            )
-        )
-    }
-}
-
-@Composable
-private fun SettingsRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = label, color = PrimaryText, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-        Text(text = value, color = AccentCyan, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-    }
 }
