@@ -85,6 +85,7 @@ fun BatteryScreen(viewModel: BatteryViewModel = viewModel()) {
             SettingsSection(state) { updateFn ->
                 viewModel.updateConfig(context, updateFn)
             }
+            AppUsageSection()
             FooterNote()
             Spacer(Modifier.height(16.dp))
         }
@@ -360,5 +361,63 @@ private fun SettingsRow(label: String, value: String) {
     ) {
         Text(text = label, color = PrimaryText, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         Text(text = value, color = AccentCyan, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun AppUsageSection() {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = "Top Consuming Apps (24h)",
+            color = PrimaryText,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+        )
+
+        BatteryCard {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Mock data to match the requested application usage details
+                AppUsageRow("Aurora Browser", "24.6%", "Productivity", AccentCyan)
+                AppUsageRow("Meridian Video", "18.3%", "Entertainment", AccentAmber)
+                AppUsageRow("Pulse Messenger", "12.1%", "Social", AccentGreen)
+                AppUsageRow("Nomad Maps", "9.7%", "Navigation", SecondaryText)
+                AppUsageRow("Cortex Mail", "7.4%", "Productivity", SecondaryText)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppUsageRow(appName: String, usagePercent: String, category: String, percentColor: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Mock icon
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(CardBorder, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = appName.take(1),
+                    color = PrimaryText,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Column {
+                Text(text = appName, color = PrimaryText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = category, color = MutedText, fontSize = 12.sp)
+            }
+        }
+        Text(text = usagePercent, color = percentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 }
