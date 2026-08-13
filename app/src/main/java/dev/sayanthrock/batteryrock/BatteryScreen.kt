@@ -59,16 +59,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 
-private val ScreenBackground = Color(0xFF0D0B14)
-private val CardBackground = Color(0x0AFFFFFF)
-private val CardBorder = Color(0x33FFFFFF)
-private val PrimaryText = Color(0xFFF8FAFC)
-private val SecondaryText = Color(0xFFA7B0C0)
-private val MutedText = Color(0xFF64748B)
-private val AccentGreen = Color(0xFF22C55E)
-private val AccentAmber = Color(0xFFF59E0B)
-private val AccentCyan = Color(0xFF00E5FF)
-private val AccentPurple = Color(0xFFA142FF)
+val ScreenBackground = Color(0xFF0D0B14)
+val CardBackground = Color(0x0AFFFFFF)
+val CardBorder = Color(0x33FFFFFF)
+val PrimaryText = Color(0xFFF8FAFC)
+val SecondaryText = Color(0xFFA7B0C0)
+val MutedText = Color(0xFF64748B)
+val AccentGreen = Color(0xFF22C55E)
+val AccentAmber = Color(0xFFF59E0B)
+val AccentCyan = Color(0xFF00E5FF)
+val AccentPurple = Color(0xFFA142FF)
 
 @Composable
 fun BatteryRockApp() {
@@ -91,6 +91,7 @@ fun BatteryRockApp() {
     NavHost(navController = navController, startDestination = "home") {
         composable("home") { HomeScreen(navController, viewModel) }
         composable("background_activity") { BackgroundActivityScreen(navController) }
+        composable("permissions") { PermissionsScreen(navController) }
     }
 }
 
@@ -385,11 +386,20 @@ fun BackgroundActivityScreen(navController: NavController) {
     val context = LocalContext.current
     var apps by remember { mutableStateOf<List<AppUsageInfo>>(emptyList()) }
     var hasPermission by remember { mutableStateOf(false) }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
-        hasPermission = BackgroundActivityAnalyzer.hasUsageStatsPermission(context)
-        if (hasPermission) {
-            apps = BackgroundActivityAnalyzer.getBackgroundActivity(context)
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                hasPermission = BackgroundActivityAnalyzer.hasUsageStatsPermission(context)
+                if (hasPermission) {
+                    apps = BackgroundActivityAnalyzer.getBackgroundActivity(context)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -413,25 +423,14 @@ fun BackgroundActivityScreen(navController: NavController) {
             )
 
             if (!hasPermission) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = CardBackground),
-                    border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentAmber, AccentAmber)))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Permission Required",
-                            color = AccentAmber,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = "To view background activity, you must grant Usage Access permission in Android Settings.",
-                            color = SecondaryText,
-                            fontSize = 14.sp
-                        )
+                PermissionCard(permission = AppPermission.USAGE_ACCESS) {
+                    val intent = PermissionManager.getSettingsIntent(context, AppPermission.USAGE_ACCESS)
+                    if (intent != null) {
+                        try {
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
                     }
                 }
             } else if (apps.isEmpty()) {
@@ -488,6 +487,38 @@ fun AppActivityItem(app: AppUsageInfo) {
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
+        }
+    }
+}
+
+@Composable
+private fun PermissionsCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan)))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = "🔒 Permissions & Access",
+                    color = AccentPurple,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Tap to manage required permissions",
+                    color = SecondaryText,
+                    fontSize = 13.sp
+                )
+            }
         }
     }
 }
