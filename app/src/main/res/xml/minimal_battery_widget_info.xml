@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="40dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+    android:maxResizeWidth="300dp"
+    android:maxResizeHeight="60dp"
+    android:resizeMode="horizontal"
+    android:widgetCategory="home_screen"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:configure="dev.sayanthrock.batteryrock.widget.WidgetConfigActivity"
+    android:previewImage="@drawable/ic_launcher"
+    android:description="@string/app_name" />
