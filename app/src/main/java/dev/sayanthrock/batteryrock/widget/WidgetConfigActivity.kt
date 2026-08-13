@@ -19,7 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import dev.sayanthrock.batteryrock.ui.theme.Theme
+
 
 class WidgetConfigActivity : ComponentActivity() {
 
@@ -41,7 +41,7 @@ class WidgetConfigActivity : ComponentActivity() {
         }
 
         setContent {
-            Theme.BatteryRockTheme {
+            dev.sayanthrock.batteryrock.ui.theme.BatteryRockTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

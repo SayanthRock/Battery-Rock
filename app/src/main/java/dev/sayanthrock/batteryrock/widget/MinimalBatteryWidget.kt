@@ -47,7 +47,7 @@ class MinimalBatteryWidget : GlanceAppWidget() {
                         Text(
                             text = "78%", // Placeholder
                             style = TextStyle(
-                                color = ColorProvider(WidgetTheme.PrimaryText),
+                                color = ColorProvider(day = WidgetTheme.PrimaryText, night = WidgetTheme.PrimaryText),
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold
                             )

@@ -41,7 +41,7 @@ class BatteryDashboardWidget : GlanceAppWidget() {
                         Text(
                             text = "78%", // Placeholder
                             style = TextStyle(
-                                color = ColorProvider(WidgetTheme.PrimaryText),
+                                color = ColorProvider(day = WidgetTheme.PrimaryText, night = WidgetTheme.PrimaryText),
                                 fontSize = 36.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -56,33 +56,33 @@ class BatteryDashboardWidget : GlanceAppWidget() {
                         Column(modifier = GlanceModifier.defaultWeight()) {
                             Text(
                                 text = "Charging",
-                                style = TextStyle(color = ColorProvider(WidgetTheme.AccentGreen), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                style = TextStyle(color = ColorProvider(day = WidgetTheme.AccentGreen, night = WidgetTheme.AccentGreen), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             )
                             Spacer(modifier = GlanceModifier.height(4.dp))
                             Text(
                                 text = "Fast charging",
-                                style = TextStyle(color = ColorProvider(WidgetTheme.PrimaryText), fontSize = 14.sp)
+                                style = TextStyle(color = ColorProvider(day = WidgetTheme.PrimaryText, night = WidgetTheme.PrimaryText), fontSize = 14.sp)
                             )
                             Spacer(modifier = GlanceModifier.height(4.dp))
                             Text(
                                 text = "18.6 W",
-                                style = TextStyle(color = ColorProvider(WidgetTheme.SecondaryText), fontSize = 14.sp)
+                                style = TextStyle(color = ColorProvider(day = WidgetTheme.SecondaryText, night = WidgetTheme.SecondaryText), fontSize = 14.sp)
                             )
                         }
                         Column(modifier = GlanceModifier.defaultWeight()) {
                             Text(
                                 text = "Status",
-                                style = TextStyle(color = ColorProvider(WidgetTheme.SecondaryText), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                style = TextStyle(color = ColorProvider(day = WidgetTheme.SecondaryText, night = WidgetTheme.SecondaryText), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             )
                             Spacer(modifier = GlanceModifier.height(4.dp))
                             Text(
                                 text = "31°C",
-                                style = TextStyle(color = ColorProvider(WidgetTheme.PrimaryText), fontSize = 14.sp)
+                                style = TextStyle(color = ColorProvider(day = WidgetTheme.PrimaryText, night = WidgetTheme.PrimaryText), fontSize = 14.sp)
                             )
                             Spacer(modifier = GlanceModifier.height(4.dp))
                             Text(
                                 text = "4.42 V · 2.8 A",
-                                style = TextStyle(color = ColorProvider(WidgetTheme.SecondaryText), fontSize = 14.sp)
+                                style = TextStyle(color = ColorProvider(day = WidgetTheme.SecondaryText, night = WidgetTheme.SecondaryText), fontSize = 14.sp)
                             )
                         }
                     }
@@ -90,7 +90,7 @@ class BatteryDashboardWidget : GlanceAppWidget() {
                     Text(
                         text = "ETA: ~46 min to 100%", // Placeholder
                         style = TextStyle(
-                            color = ColorProvider(WidgetTheme.SecondaryText),
+                            color = ColorProvider(day = WidgetTheme.SecondaryText, night = WidgetTheme.SecondaryText),
                             fontSize = 14.sp
                         )
                     )

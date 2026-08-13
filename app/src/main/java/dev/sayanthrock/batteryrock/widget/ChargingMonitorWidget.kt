@@ -37,7 +37,7 @@ class ChargingMonitorWidget : GlanceAppWidget() {
                     Text(
                         text = "Charging",
                         style = TextStyle(
-                            color = ColorProvider(WidgetTheme.AccentGreen),
+                            color = ColorProvider(day = WidgetTheme.AccentGreen, night = WidgetTheme.AccentGreen),
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -46,7 +46,7 @@ class ChargingMonitorWidget : GlanceAppWidget() {
                     Text(
                         text = "62% → 100%", // Placeholder
                         style = TextStyle(
-                            color = ColorProvider(WidgetTheme.PrimaryText),
+                            color = ColorProvider(day = WidgetTheme.PrimaryText, night = WidgetTheme.PrimaryText),
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -55,7 +55,7 @@ class ChargingMonitorWidget : GlanceAppWidget() {
                     Text(
                         text = "18.6 W · Fast charging", // Placeholder
                         style = TextStyle(
-                            color = ColorProvider(WidgetTheme.SecondaryText),
+                            color = ColorProvider(day = WidgetTheme.SecondaryText, night = WidgetTheme.SecondaryText),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -64,7 +64,7 @@ class ChargingMonitorWidget : GlanceAppWidget() {
                     Text(
                         text = "Started at 21:34", // Placeholder
                         style = TextStyle(
-                            color = ColorProvider(WidgetTheme.MutedText),
+                            color = ColorProvider(day = WidgetTheme.MutedText, night = WidgetTheme.MutedText),
                             fontSize = 14.sp
                         )
                     )
@@ -72,7 +72,7 @@ class ChargingMonitorWidget : GlanceAppWidget() {
                     Text(
                         text = "Elapsed 38 min · ~46 min remaining", // Placeholder
                         style = TextStyle(
-                            color = ColorProvider(WidgetTheme.SecondaryText),
+                            color = ColorProvider(day = WidgetTheme.SecondaryText, night = WidgetTheme.SecondaryText),
                             fontSize = 14.sp
                         )
                     )

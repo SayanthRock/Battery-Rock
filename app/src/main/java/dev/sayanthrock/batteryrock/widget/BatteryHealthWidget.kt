@@ -36,7 +36,7 @@ class BatteryHealthWidget : GlanceAppWidget() {
                     Text(
                         text = "Battery Health",
                         style = TextStyle(
-                            color = ColorProvider(WidgetTheme.SecondaryText),
+                            color = ColorProvider(day = WidgetTheme.SecondaryText, night = WidgetTheme.SecondaryText),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -45,7 +45,7 @@ class BatteryHealthWidget : GlanceAppWidget() {
                     Text(
                         text = "94%", // Placeholder
                         style = TextStyle(
-                            color = ColorProvider(WidgetTheme.PrimaryText),
+                            color = ColorProvider(day = WidgetTheme.PrimaryText, night = WidgetTheme.PrimaryText),
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -54,7 +54,7 @@ class BatteryHealthWidget : GlanceAppWidget() {
                     Text(
                         text = "Good", // Placeholder
                         style = TextStyle(
-                            color = ColorProvider(WidgetTheme.AccentGreen),
+                            color = ColorProvider(day = WidgetTheme.AccentGreen, night = WidgetTheme.AccentGreen),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -63,7 +63,7 @@ class BatteryHealthWidget : GlanceAppWidget() {
                     Text(
                         text = "Temperature 30°C", // Placeholder
                         style = TextStyle(
-                            color = ColorProvider(WidgetTheme.SecondaryText),
+                            color = ColorProvider(day = WidgetTheme.SecondaryText, night = WidgetTheme.SecondaryText),
                             fontSize = 14.sp
                         )
                     )
@@ -71,7 +71,7 @@ class BatteryHealthWidget : GlanceAppWidget() {
                     Text(
                         text = "Cycles 327", // Placeholder
                         style = TextStyle(
-                            color = ColorProvider(WidgetTheme.SecondaryText),
+                            color = ColorProvider(day = WidgetTheme.SecondaryText, night = WidgetTheme.SecondaryText),
                             fontSize = 14.sp
                         )
                     )

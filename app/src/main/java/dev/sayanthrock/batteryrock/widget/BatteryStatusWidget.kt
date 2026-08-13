@@ -49,7 +49,7 @@ class BatteryStatusWidget : GlanceAppWidget() {
                         Text(
                             text = "78%", // Placeholder
                             style = TextStyle(
-                                color = ColorProvider(WidgetTheme.PrimaryText),
+                                color = ColorProvider(day = WidgetTheme.PrimaryText, night = WidgetTheme.PrimaryText),
                                 fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -64,7 +64,7 @@ class BatteryStatusWidget : GlanceAppWidget() {
                         Text(
                             text = "Charging",
                             style = TextStyle(
-                                color = ColorProvider(WidgetTheme.AccentGreen),
+                                color = ColorProvider(day = WidgetTheme.AccentGreen, night = WidgetTheme.AccentGreen),
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -74,7 +74,7 @@ class BatteryStatusWidget : GlanceAppWidget() {
                     Text(
                         text = "Fast charging · 42 min until full",
                         style = TextStyle(
-                            color = ColorProvider(WidgetTheme.SecondaryText),
+                            color = ColorProvider(day = WidgetTheme.SecondaryText, night = WidgetTheme.SecondaryText),
                             fontSize = 14.sp
                         )
                     )
