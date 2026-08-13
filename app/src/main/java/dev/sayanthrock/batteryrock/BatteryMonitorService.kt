@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import dev.sayanthrock.batteryrock.db.BatteryDatabase
 import dev.sayanthrock.batteryrock.db.BatteryHistory
 import dev.sayanthrock.batteryrock.db.ChargingSession
+import dev.sayanthrock.batteryrock.widget.WidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -159,6 +160,7 @@ class BatteryMonitorService : Service() {
                 "Discharging · $temperature"
             }
             updateNotification(title, content)
+            WidgetUpdater.updateAllWidgets(this@BatteryMonitorService)
         }
     }
 
