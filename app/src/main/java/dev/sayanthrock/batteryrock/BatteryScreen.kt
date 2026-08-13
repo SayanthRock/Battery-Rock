@@ -1,5 +1,6 @@
 package dev.sayanthrock.batteryrock
 
+import android.content.Intent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -8,6 +9,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,17 +22,26 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -43,6 +54,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
 private val ScreenBackground = Color(0xFF0D0B14)
 private val CardBackground = Color(0x0AFFFFFF)
@@ -56,14 +71,32 @@ private val AccentCyan = Color(0xFF00E5FF)
 private val AccentPurple = Color(0xFFA142FF)
 
 @Composable
-fun BatteryScreen(viewModel: BatteryViewModel = viewModel()) {
+fun BatteryRockApp() {
+    val navController = rememberNavController()
+    val viewModel: BatteryViewModel = viewModel()
+
     val context = LocalContext.current
-    val state by viewModel.uiState.collectAsState()
+
+    // Start foreground service if not already running
+    LaunchedEffect(Unit) {
+        val serviceIntent = Intent(context, BatteryMonitorService::class.java)
+        context.startService(serviceIntent) // Requires proper foreground starting logic depending on SDK, handled in activity or here via startForegroundService
+    }
 
     DisposableEffect(context) {
         viewModel.start(context)
         onDispose { viewModel.stop(context) }
     }
+
+    NavHost(navController = navController, startDestination = "home") {
+        composable("home") { HomeScreen(navController, viewModel) }
+        composable("background_activity") { BackgroundActivityScreen(navController) }
+    }
+}
+
+@Composable
+fun HomeScreen(navController: NavController, viewModel: BatteryViewModel) {
+    val state by viewModel.uiState.collectAsState()
 
     Surface(color = ScreenBackground) {
         Column(
@@ -72,12 +105,22 @@ fun BatteryScreen(viewModel: BatteryViewModel = viewModel()) {
                 .background(Brush.verticalGradient(listOf(ScreenBackground, Color(0xFF0B1020))))
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 24.dp),
+                .padding(horizontal = 20.dp, vertical = 24.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             BatteryHeader(state)
             BatteryPercentCard(state)
             DetailGrid(state)
+
+            if (state.isCharging) {
+                ChargingPredictionCard(state)
+            } else {
+                DrainPredictionCard(state)
+            }
+
+            BackgroundActivityCard(onClick = { navController.navigate("background_activity") })
+
             FooterNote()
         }
     }
@@ -129,12 +172,22 @@ private fun BatteryPercentCard(state: BatteryUiState) {
             lineHeight = 76.sp
         )
         Spacer(Modifier.height(8.dp))
-        Text(
-            text = state.status,
-            color = statusColor,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = if (state.isCharging) "⚡ ${state.status}" else state.status,
+                color = statusColor,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            if (state.isCharging && state.wattage != "Unknown") {
+                Text(
+                    text = " · ${state.wattage}",
+                    color = PrimaryText,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
         Spacer(Modifier.height(8.dp))
         Text(
             text = "Health: ${state.health}",
@@ -152,8 +205,97 @@ private fun DetailGrid(state: BatteryUiState) {
             StatCard("Temperature", state.temperature, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Technology", state.technology, Modifier.weight(1f))
             StatCard("Voltage", state.voltage, Modifier.weight(1f))
+            StatCard("Current", state.current, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun ChargingPredictionCard(state: BatteryUiState) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan)))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "CHARGING PREDICTION",
+                color = AccentCyan,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = state.timeToFullStr,
+                color = PrimaryText,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun DrainPredictionCard(state: BatteryUiState) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentAmber, AccentCyan)))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "🔋 NEED TO CHARGE SOON",
+                color = AccentAmber,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Estimated remaining time:",
+                color = SecondaryText,
+                fontSize = 14.sp
+            )
+            Text(
+                text = state.timeToEmptyStr,
+                color = PrimaryText,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun BackgroundActivityCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan)))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = "⚠ Background Activity",
+                    color = AccentAmber,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Tap to view app battery impact",
+                    color = SecondaryText,
+                    fontSize = 13.sp
+                )
+            }
         }
     }
 }
@@ -236,4 +378,116 @@ private fun FooterNote() {
         fontSize = 11.sp,
         modifier = Modifier.padding(top = 4.dp)
     )
+}
+
+@Composable
+fun BackgroundActivityScreen(navController: NavController) {
+    val context = LocalContext.current
+    var apps by remember { mutableStateOf<List<AppUsageInfo>>(emptyList()) }
+    var hasPermission by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        hasPermission = BackgroundActivityAnalyzer.hasUsageStatsPermission(context)
+        if (hasPermission) {
+            apps = BackgroundActivityAnalyzer.getBackgroundActivity(context)
+        }
+    }
+
+    Surface(color = ScreenBackground) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Brush.verticalGradient(listOf(ScreenBackground, Color(0xFF0B1020))))
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 24.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Background Activity",
+                color = PrimaryText,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { navController.popBackStack() }
+            )
+
+            if (!hasPermission) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardBackground),
+                    border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentAmber, AccentAmber)))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Permission Required",
+                            color = AccentAmber,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "To view background activity, you must grant Usage Access permission in Android Settings.",
+                            color = SecondaryText,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            } else if (apps.isEmpty()) {
+                 Text(
+                    text = "No recent background activity detected.",
+                    color = SecondaryText,
+                    fontSize = 14.sp
+                )
+            } else {
+                apps.take(10).forEach { app ->
+                    AppActivityItem(app)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AppActivityItem(app: AppUsageInfo) {
+    val impactColor = when (app.batteryImpact) {
+        BatteryImpact.HIGH -> AccentAmber
+        BatteryImpact.MEDIUM -> AccentCyan
+        BatteryImpact.LOW -> AccentGreen
+        BatteryImpact.SYSTEM -> SecondaryText
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(CardBorder, CardBorder)))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = app.appName,
+                    color = PrimaryText,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Foreground time: ${app.totalTimeInForeground / 1000 / 60} mins",
+                    color = SecondaryText,
+                    fontSize = 13.sp
+                )
+            }
+            Text(
+                text = "Impact: ${app.batteryImpact.label}",
+                color = impactColor,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
 }
