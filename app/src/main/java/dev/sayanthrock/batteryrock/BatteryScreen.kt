@@ -28,6 +28,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -59,8 +61,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 
-val ScreenBackground = Color(0xFF0D0B14)
-val CardBackground = Color(0x0AFFFFFF)
+
+
 val CardBorder = Color(0x33FFFFFF)
 val PrimaryText = Color(0xFFF8FAFC)
 val SecondaryText = Color(0xFFA7B0C0)
@@ -92,6 +94,7 @@ fun BatteryRockApp() {
         composable("home") { HomeScreen(navController, viewModel) }
         composable("background_activity") { BackgroundActivityScreen(navController) }
         composable("permissions") { PermissionsScreen(navController) }
+        composable("settings") { SettingsScreen(navController) }
     }
 }
 
@@ -99,18 +102,18 @@ fun BatteryRockApp() {
 fun HomeScreen(navController: NavController, viewModel: BatteryViewModel) {
     val state by viewModel.uiState.collectAsState()
 
-    Surface(color = ScreenBackground) {
+    Surface(color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(ScreenBackground, Color(0xFF0B1020))))
+                .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surfaceVariant)))
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 24.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            BatteryHeader(state)
+            BatteryHeader(state, navController)
             BatteryPercentCard(state)
             DetailGrid(state)
 
@@ -128,7 +131,7 @@ fun HomeScreen(navController: NavController, viewModel: BatteryViewModel) {
 }
 
 @Composable
-private fun BatteryHeader(state: BatteryUiState) {
+private fun BatteryHeader(state: BatteryUiState, navController: NavController) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -147,7 +150,16 @@ private fun BatteryHeader(state: BatteryUiState) {
                 fontSize = 13.sp
             )
         }
-        ChargingIndicator(isCharging = state.isCharging)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ChargingIndicator(isCharging = state.isCharging)
+            IconButton(onClick = { navController.navigate("settings") }) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = PrimaryText
+                )
+            }
+        }
     }
 }
 
@@ -217,7 +229,7 @@ private fun ChargingPredictionCard(state: BatteryUiState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan)))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -243,7 +255,7 @@ private fun DrainPredictionCard(state: BatteryUiState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentAmber, AccentCyan)))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -276,7 +288,7 @@ private fun BackgroundActivityCard(onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan)))
     ) {
         Row(
@@ -306,7 +318,7 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan)))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -332,7 +344,7 @@ private fun BatteryCard(content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(CardBackground, RoundedCornerShape(28.dp))
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(28.dp))
             .border(1.dp, Brush.linearGradient(listOf(AccentPurple, AccentCyan)), RoundedCornerShape(28.dp))
             .padding(24.dp),
         horizontalAlignment = Alignment.Start,
@@ -403,11 +415,11 @@ fun BackgroundActivityScreen(navController: NavController) {
         }
     }
 
-    Surface(color = ScreenBackground) {
+    Surface(color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(ScreenBackground, Color(0xFF0B1020))))
+                .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surfaceVariant)))
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 24.dp)
@@ -460,7 +472,7 @@ fun AppActivityItem(app: AppUsageInfo) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(CardBorder, CardBorder)))
     ) {
         Row(
@@ -498,7 +510,7 @@ private fun PermissionsCard(onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan)))
     ) {
         Row(

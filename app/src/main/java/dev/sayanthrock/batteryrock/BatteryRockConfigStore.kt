@@ -8,6 +8,7 @@ data class BatteryRockConfig(
     val ramRomMode: String = BatteryRockConfigStore.DEFAULT_RAM_ROM_MODE,
     val refreshRateMode: String = BatteryRockConfigStore.DEFAULT_REFRESH_RATE_MODE,
     val batteryCare80: Boolean = false,
+    val themeMode: String = BatteryRockConfigStore.DEFAULT_THEME_MODE,
     val lastAppliedAtMillis: Long = 0L,
 )
 
@@ -17,6 +18,7 @@ object BatteryRockConfigStore {
     const val DEFAULT_PERFORMANCE_MODE = "Standard"
     const val DEFAULT_RAM_ROM_MODE = "Balanced daily profile"
     const val DEFAULT_REFRESH_RATE_MODE = "Auto-select"
+    const val DEFAULT_THEME_MODE = "Follow system"
 
     private const val PREFS = "battery_rock_controls"
     private const val KEY_BATTERY_MODE = "battery_mode"
@@ -25,6 +27,7 @@ object BatteryRockConfigStore {
     private const val KEY_REFRESH_RATE_MODE = "refresh_rate_mode"
     private const val KEY_BATTERY_CARE_80 = "battery_care_80"
     private const val KEY_LAST_APPLIED_AT = "last_applied_at"
+    private const val KEY_THEME_MODE = "theme_mode"
 
     fun read(context: Context): BatteryRockConfig {
         val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -34,6 +37,7 @@ object BatteryRockConfigStore {
             ramRomMode = prefs.getString(KEY_RAM_ROM_MODE, DEFAULT_RAM_ROM_MODE) ?: DEFAULT_RAM_ROM_MODE,
             refreshRateMode = prefs.getString(KEY_REFRESH_RATE_MODE, DEFAULT_REFRESH_RATE_MODE) ?: DEFAULT_REFRESH_RATE_MODE,
             batteryCare80 = prefs.getBoolean(KEY_BATTERY_CARE_80, false),
+            themeMode = prefs.getString(KEY_THEME_MODE, DEFAULT_THEME_MODE) ?: DEFAULT_THEME_MODE,
             lastAppliedAtMillis = prefs.getLong(KEY_LAST_APPLIED_AT, 0L),
         )
     }
@@ -46,6 +50,7 @@ object BatteryRockConfigStore {
             .putString(KEY_RAM_ROM_MODE, config.ramRomMode)
             .putString(KEY_REFRESH_RATE_MODE, config.refreshRateMode)
             .putBoolean(KEY_BATTERY_CARE_80, config.batteryCare80)
+            .putString(KEY_THEME_MODE, config.themeMode)
             .putLong(KEY_LAST_APPLIED_AT, config.lastAppliedAtMillis)
             .apply()
     }

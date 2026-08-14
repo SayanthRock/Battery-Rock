@@ -42,11 +42,11 @@ fun PermissionsScreen(navController: NavController) {
         }
     }
 
-    Surface(color = ScreenBackground) {
+    Surface(color = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(ScreenBackground, Color(0xFF0B1020))))
+                .background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surfaceVariant)))
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 24.dp)
@@ -112,7 +112,7 @@ fun PermissionCard(permission: AppPermission, onClickEnable: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(borderColor, borderColor)))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
