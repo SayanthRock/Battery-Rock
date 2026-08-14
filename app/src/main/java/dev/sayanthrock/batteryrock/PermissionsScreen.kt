@@ -102,7 +102,7 @@ fun PermissionCard(permission: AppPermission, onClickEnable: () -> Unit) {
     val isGranted = PermissionManager.checkPermission(context, permission)
 
     val (borderColor, statusText, statusColor) = if (isGranted) {
-        Triple(AccentGreen, "Enabled", AccentGreen)
+        Triple(AccentCyan, "Enabled", AccentCyan)
     } else if (permission.isRequired) {
         Triple(AccentAmber, "Required", AccentAmber)
     } else {
@@ -123,7 +123,7 @@ fun PermissionCard(permission: AppPermission, onClickEnable: () -> Unit) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (isGranted) {
-                        Text(text = "✓ ", color = AccentGreen, fontWeight = FontWeight.Bold)
+                        Text(text = "✓ ", color = AccentCyan, fontWeight = FontWeight.Bold)
                     } else if (permission.isRequired) {
                         Text(text = "⚠ ", color = AccentAmber, fontWeight = FontWeight.Bold)
                     }
@@ -154,7 +154,7 @@ fun PermissionCard(permission: AppPermission, onClickEnable: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = onClickEnable,
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentPurple),
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentAmber),
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                 ) {
