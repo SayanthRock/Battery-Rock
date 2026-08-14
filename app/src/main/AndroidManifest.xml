@@ -42,7 +42,7 @@
 
         <meta-data
             android:name="xposeddescription"
-            android:value="Battery-Rock: battery health dashboard and controlled background optimization for OPPO, Realme and OnePlus" />
+            android:value="@string/module_description" />
 
         <meta-data
             android:name="xposedminversion"
