@@ -87,7 +87,6 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.work.runtime.ktx)
-    implementation("com.google.code.gson:gson:2.10.1")
 
     compileOnly("de.robv.android.xposed:api:82")
 }
