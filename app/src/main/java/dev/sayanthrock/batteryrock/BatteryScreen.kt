@@ -121,6 +121,7 @@ fun HomeScreen(navController: NavController, viewModel: BatteryViewModel) {
             }
 
             BackgroundActivityCard(onClick = { navController.navigate("background_activity") })
+            PermissionsCard(onClick = { navController.navigate("permissions") })
 
             FooterNote()
         }
