@@ -1,5 +1,7 @@
 plugins {
     alias(libs.plugins.ksp)
+
+    alias(libs.plugins.ksp)
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -89,4 +91,12 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
 
     compileOnly("de.robv.android.xposed:api:82")
+}
+
+dependencies {
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.work.runtime.ktx)
 }

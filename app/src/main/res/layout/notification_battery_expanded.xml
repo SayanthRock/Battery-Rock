@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <!-- Header Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:scaleType="centerInside" />
+
+        <TextView
+            android:id="@+id/app_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Battery-Rock"
+            android:textColor="#FF818CF8"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/session_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text=" • "
+            android:textColor="#FFE5E7EB"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Headline Row -->
+    <TextView
+        android:id="@+id/headline"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Now: 0 mA (0 W) • 0° • 0h 0m"
+        android:textColor="#FFE5E7EB"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <!-- Rate Row -->
+    <TextView
+        android:id="@+id/rate_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Active: 0%/h • Idle: Measuring"
+        android:textColor="#FF9CA3AF"
+        android:textSize="12sp" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:background="#33FFFFFF" />
+
+    <!-- Breakdown Rows -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Screen On"
+                android:textColor="#FFE5E7EB"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/screen_on_stats"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0m • 0% • 0 mAh"
+                android:textColor="#FFE5E7EB"
+                android:textSize="12sp"
+                android:typeface="monospace" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Screen Off"
+                android:textColor="#FFE5E7EB"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/screen_off_stats"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0m • 0% • 0 mAh"
+                android:textColor="#FFE5E7EB"
+                android:textSize="12sp"
+                android:typeface="monospace" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Deep Sleep"
+                android:textColor="#FFE5E7EB"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/deep_sleep_stats"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0m • 0% • 0 mAh"
+                android:textColor="#FFE5E7EB"
+                android:textSize="12sp"
+                android:typeface="monospace" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Awake (Off)"
+                android:textColor="#FFE5E7EB"
+                android:textSize="12sp" />
+            <TextView
+                android:id="@+id/awake_stats"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0m • 0% • 0 mAh"
+                android:textColor="#FFE5E7EB"
+                android:textSize="12sp"
+                android:typeface="monospace" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>
