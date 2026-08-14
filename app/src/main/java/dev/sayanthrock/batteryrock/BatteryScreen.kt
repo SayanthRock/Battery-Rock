@@ -254,17 +254,26 @@ private fun DrainPredictionCard(state: BatteryUiState) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Estimated remaining time:",
-                color = SecondaryText,
-                fontSize = 14.sp
-            )
-            Text(
-                text = state.timeToEmptyStr,
-                color = PrimaryText,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            if (state.isEtaCalculating || state.isEtaUnstable) {
+                Text(
+                    text = state.timeToEmptyStr,
+                    color = SecondaryText,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
+            } else {
+                Text(
+                    text = "Estimated remaining time:",
+                    color = SecondaryText,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = state.timeToEmptyStr,
+                    color = PrimaryText,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }

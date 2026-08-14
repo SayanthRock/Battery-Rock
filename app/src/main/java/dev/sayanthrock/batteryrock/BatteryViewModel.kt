@@ -32,9 +32,13 @@ class BatteryViewModel : ViewModel() {
     val sessions: StateFlow<List<ChargingSession>> = _sessions.asStateFlow()
 
     private var batteryReceiver: BroadcastReceiver? = null
+    private var etaCalculator: EtaCalculator? = null
 
     fun start(context: Context) {
         val appContext = context.applicationContext
+        if (etaCalculator == null) {
+            etaCalculator = EtaCalculator(appContext)
+        }
 
         // Load history and sessions from DB
         val db = BatteryDatabase.getDatabase(appContext)
@@ -56,13 +60,13 @@ class BatteryViewModel : ViewModel() {
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
 
         appContext.registerReceiver(null, filter)?.let { stickyIntent ->
-            _uiState.value = stickyIntent.toBatteryUiState(appContext)
+            _uiState.value = stickyIntent.toBatteryUiState(appContext, etaCalculator)
         }
 
         batteryReceiver = object : BroadcastReceiver() {
             override fun onReceive(receiverContext: Context?, intent: Intent?) {
                 if (intent?.action == Intent.ACTION_BATTERY_CHANGED) {
-                    _uiState.value = intent.toBatteryUiState(appContext)
+                    _uiState.value = intent.toBatteryUiState(appContext, etaCalculator)
                 }
             }
         }
@@ -96,11 +100,13 @@ data class BatteryUiState(
     val current: String = "Unknown",
     val wattage: String = "Unknown",
     val isCharging: Boolean = false,
+    val isEtaCalculating: Boolean = false,
+    val isEtaUnstable: Boolean = false,
     val timeToFullStr: String = "Calculating...",
     val timeToEmptyStr: String = "Calculating..."
 )
 
-private fun Intent.toBatteryUiState(context: Context): BatteryUiState {
+private fun Intent.toBatteryUiState(context: Context, etaCalculator: EtaCalculator? = null): BatteryUiState {
     val level = getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
     val scale = getIntExtra(BatteryManager.EXTRA_SCALE, -1)
     val percentage = if (level >= 0 && scale > 0) {
@@ -138,22 +144,42 @@ private fun Intent.toBatteryUiState(context: Context): BatteryUiState {
 
     var timeToFull = "Unknown"
     var timeToEmpty = "Unknown"
+    var isCalculating = false
+    var isUnstable = false
 
-    if (currentMa != 0f) {
-        if (isCharging && percentage < 100) {
-            val remainingMah = totalCapacityMah * ((100 - percentage) / 100f)
-            val hours = remainingMah / Math.abs(currentMa)
-            if (hours in 0.01..24.0) {
-                val mins = (hours * 60).roundToInt()
-                timeToFull = "~${mins / 60}h ${mins % 60}m until 100%"
+    if (currentMa != 0f && etaCalculator != null) {
+        etaCalculator.addSample(currentMa, isCharging, percentage)
+        val result = etaCalculator.calculateEta(totalCapacityMah)
+
+        when (result) {
+            is EtaResult.InsufficientData -> {
+                isCalculating = true
+                if (isCharging) {
+                    timeToFull = "Calculating remaining time...\nBattery-Rock is learning your charging rate."
+                } else {
+                    timeToEmpty = "Calculating remaining time...\nBattery-Rock is learning your current drain rate."
+                }
             }
-        } else if (!isCharging && percentage > 0) {
-            val availableMah = totalCapacityMah * (percentage / 100f)
-            val hours = availableMah / Math.abs(currentMa)
-            if (hours in 0.01..200.0) {
-                val mins = (hours * 60).roundToInt()
-                timeToEmpty = "~${mins / 60}h ${mins % 60}m remaining"
+            is EtaResult.Unstable -> {
+                isUnstable = true
+                if (isCharging) {
+                    timeToFull = "Time estimate unavailable\nContinue charging to improve the estimate."
+                } else {
+                    timeToEmpty = "Time estimate unavailable\nContinue using your phone to improve the estimate."
+                }
             }
+            is EtaResult.Calculated -> {
+                timeToFull = result.timeToFullStr
+                timeToEmpty = result.timeToEmptyStr
+            }
+        }
+    } else {
+        // Fallback or old logic if needed, but we prefer the EtaCalculator
+        isCalculating = true
+        if (isCharging) {
+            timeToFull = "Calculating remaining time..."
+        } else {
+            timeToEmpty = "Calculating remaining time..."
         }
     }
 
@@ -168,7 +194,9 @@ private fun Intent.toBatteryUiState(context: Context): BatteryUiState {
         wattage = wattageStr,
         isCharging = isCharging,
         timeToFullStr = timeToFull,
-        timeToEmptyStr = timeToEmpty
+        timeToEmptyStr = timeToEmpty,
+        isEtaCalculating = isCalculating,
+        isEtaUnstable = isUnstable
     )
 }
 
