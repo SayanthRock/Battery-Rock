@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Battery-Rock</string>
-    <string name="module_description">Battery optimization for OPPO/Realme/OnePlus — kills OPLUS telemetry, caps wakelocks, and blocks background drain.</string>
+    <string name="module_description">Get your actual battery capacity in mAh, track health degradation over time, measure real charging current, monitor temperature and see everything on an always-on display or homescreen widget. Battery Rock builds on top of Android to give you the full picture.</string>
 </resources>
