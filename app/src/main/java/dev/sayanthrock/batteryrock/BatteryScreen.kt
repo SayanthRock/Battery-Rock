@@ -51,6 +51,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -59,16 +61,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 
-val ScreenBackground = Color(0xFF0D0B14)
-val CardBackground = Color(0x0AFFFFFF)
-val CardBorder = Color(0x33FFFFFF)
-val PrimaryText = Color(0xFFF8FAFC)
-val SecondaryText = Color(0xFFA7B0C0)
-val MutedText = Color(0xFF64748B)
-val AccentGreen = Color(0xFF22C55E)
-val AccentAmber = Color(0xFFF59E0B)
-val AccentCyan = Color(0xFF00E5FF)
-val AccentPurple = Color(0xFFA142FF)
+val ScreenBackground = Color(0xFF0E1013)
+val CardBackground = Color(0xFF16191D)
+val CardBorder = Color(0xFF333840)
+val PrimaryText = Color(0xFFE8E6E1)
+val SecondaryText = Color(0xFFA9A9A9)
+val MutedText = Color(0xFF8B8B8B)
+val AccentAmber = Color(0xFFFFB627)
+val AccentCyan = Color(0xFF4DE0FF)
+val AlertRed = Color(0xFFD32F2F)
 
 @Composable
 fun BatteryRockApp() {
@@ -103,7 +104,7 @@ fun HomeScreen(navController: NavController, viewModel: BatteryViewModel) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(ScreenBackground, Color(0xFF0B1020))))
+                .background(ScreenBackground)
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 24.dp)
@@ -111,6 +112,7 @@ fun HomeScreen(navController: NavController, viewModel: BatteryViewModel) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             BatteryHeader(state)
+            BatteryWaveform()
             BatteryPercentCard(state)
             DetailGrid(state)
 
@@ -123,6 +125,34 @@ fun HomeScreen(navController: NavController, viewModel: BatteryViewModel) {
             BackgroundActivityCard(onClick = { navController.navigate("background_activity") })
 
             FooterNote()
+        }
+    }
+}
+
+@Composable
+private fun BatteryWaveform() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(60.dp)
+            .background(CardBackground, CutCornerShape(4.dp))
+            .border(1.dp, CardBorder, CutCornerShape(4.dp))
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Simple faux waveform for the "Diagnostic Console" look
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(40) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 2.dp, height = (10..40).random().dp)
+                        .background(AccentCyan.copy(alpha = 0.5f))
+                )
+            }
         }
     }
 }
@@ -155,7 +185,7 @@ private fun BatteryHeader(state: BatteryUiState) {
 private fun BatteryPercentCard(state: BatteryUiState) {
     val statusColor by animateColorAsState(
         targetValue = when (state.status) {
-            "Charging", "Full" -> AccentGreen
+            "Charging", "Full" -> AccentCyan
             "Discharging" -> AccentAmber
             else -> AccentCyan
         },
@@ -165,9 +195,7 @@ private fun BatteryPercentCard(state: BatteryUiState) {
     BatteryCard {
         Text(
             text = "${state.percentage}%",
-            style = TextStyle(
-                brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan))
-            ),
+            color = AccentAmber, fontFamily = FontFamily.Monospace,
             fontSize = 72.sp,
             fontWeight = FontWeight.ExtraBold,
             lineHeight = 76.sp
@@ -216,9 +244,9 @@ private fun DetailGrid(state: BatteryUiState) {
 private fun ChargingPredictionCard(state: BatteryUiState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = CutCornerShape(4.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
-        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan)))
+        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -242,9 +270,9 @@ private fun ChargingPredictionCard(state: BatteryUiState) {
 private fun DrainPredictionCard(state: BatteryUiState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = CutCornerShape(4.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
-        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentAmber, AccentCyan)))
+        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -275,9 +303,9 @@ private fun BackgroundActivityCard(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
+        shape = CutCornerShape(4.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
-        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan)))
+        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -305,9 +333,9 @@ private fun BackgroundActivityCard(onClick: () -> Unit) {
 private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
+        shape = CutCornerShape(4.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
-        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan)))
+        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -321,6 +349,7 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
                 text = value,
                 color = PrimaryText,
                 fontSize = 16.sp,
+                fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -332,8 +361,8 @@ private fun BatteryCard(content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(CardBackground, RoundedCornerShape(28.dp))
-            .border(1.dp, Brush.linearGradient(listOf(AccentPurple, AccentCyan)), RoundedCornerShape(28.dp))
+            .background(CardBackground, CutCornerShape(4.dp))
+            .border(1.dp, CardBorder, CutCornerShape(4.dp))
             .padding(24.dp),
         horizontalAlignment = Alignment.Start,
         content = { content() }
@@ -356,15 +385,15 @@ private fun ChargingIndicator(isCharging: Boolean) {
     Box(
         modifier = Modifier
             .scale(pulse)
-            .shadow(elevation = if (isCharging) 12.dp else 0.dp, spotColor = AccentGreen, shape = CircleShape)
+            .shadow(elevation = if (isCharging) 12.dp else 0.dp, spotColor = AccentCyan, shape = CircleShape)
             .size(42.dp)
-            .background(if (isCharging) AccentGreen.copy(alpha = 0.18f) else Color(0x0FFFFFFF), CircleShape)
-            .border(1.dp, if (isCharging) AccentGreen else CardBorder, CircleShape),
+            .background(if (isCharging) AccentCyan.copy(alpha = 0.18f) else Color(0x0FFFFFFF), CircleShape)
+            .border(1.dp, if (isCharging) AccentCyan else CardBorder, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = if (isCharging) "⚡" else "•",
-            color = if (isCharging) AccentGreen else SecondaryText,
+            color = if (isCharging) AccentCyan else SecondaryText,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
@@ -407,7 +436,7 @@ fun BackgroundActivityScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(ScreenBackground, Color(0xFF0B1020))))
+                .background(ScreenBackground)
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 24.dp)
@@ -453,15 +482,15 @@ fun AppActivityItem(app: AppUsageInfo) {
     val impactColor = when (app.batteryImpact) {
         BatteryImpact.HIGH -> AccentAmber
         BatteryImpact.MEDIUM -> AccentCyan
-        BatteryImpact.LOW -> AccentGreen
+        BatteryImpact.LOW -> AccentCyan
         BatteryImpact.SYSTEM -> SecondaryText
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = CutCornerShape(4.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
-        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(CardBorder, CardBorder)))
+        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -497,9 +526,9 @@ private fun PermissionsCard(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
+        shape = CutCornerShape(4.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
-        border = CardDefaults.outlinedCardBorder().copy(width = 1.dp, brush = Brush.linearGradient(listOf(AccentPurple, AccentCyan)))
+        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -509,7 +538,7 @@ private fun PermissionsCard(onClick: () -> Unit) {
             Column {
                 Text(
                     text = "🔒 Permissions & Access",
-                    color = AccentPurple,
+                    color = AccentAmber,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )

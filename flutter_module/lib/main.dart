@@ -1,109 +1,157 @@
 import 'package:flutter/material.dart';
 
-void main() => runApp(const MyApp());
+void main() => runApp(const BatteryRockFlutterModule());
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class BatteryRockFlutterModule extends StatelessWidget {
+  const BatteryRockFlutterModule({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    // Diagnostic Console Palette
+    const backgroundColor = Color(0xFF0E1013);
+    const cardColor = Color(0xFF16191D);
+    const primaryTextColor = Color(0xFFE8E6E1);
+    const secondaryTextColor = Color(0xFFA9A9A9);
+    const accentCyan = Color(0xFF4DE0FF);
+    const accentAmber = Color(0xFFFFB627);
+    const alertRed = Color(0xFFD32F2F);
+    const dividerColor = Color(0xFF333840);
+
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Battery-Rock Module',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or press Run > Flutter Hot Reload in a Flutter IDE). Notice that the
-        // counter didn't reset back to zero; the application is not restarted.
-        primarySwatch: Colors.blue,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: backgroundColor,
+        cardColor: cardColor,
+        dividerColor: dividerColor,
+        textTheme: const TextTheme(
+          bodyMedium: TextStyle(color: primaryTextColor),
+          titleLarge: TextStyle(color: primaryTextColor, fontWeight: FontWeight.bold),
+          titleMedium: TextStyle(color: primaryTextColor, fontWeight: FontWeight.w600),
+          titleSmall: TextStyle(color: secondaryTextColor),
+        ),
+        colorScheme: const ColorScheme.dark(
+          primary: accentAmber,
+          secondary: accentCyan,
+          surface: cardColor,
+          error: alertRed,
+        ),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const PatchPanelScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class PatchPanelScreen extends StatefulWidget {
+  const PatchPanelScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<PatchPanelScreen> createState() => _PatchPanelScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+class _PatchPanelScreenState extends State<PatchPanelScreen> {
+  final Map<String, bool> _hookStates = {
+    'Telemetry Killer': true,
+    'Charge Limiter': true,
+    'Wakelock Blocker': false,
+    'ROM Adaptive Engine': true,
+    'Thermal Throttler': false,
+  };
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    const accentAmber = Color(0xFFFFB627);
+    const dividerColor = Color(0xFF333840);
+    const cardColor = Color(0xFF16191D);
+    const primaryTextColor = Color(0xFFE8E6E1);
+    const secondaryTextColor = Color(0xFFA9A9A9);
+
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+        title: const Text('Xposed Hook Panel'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            color: dividerColor,
+            height: 1.0,
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16.0),
+            child: Text(
+              'MODULE STATUS: ACTIVE',
+              style: TextStyle(
+                fontFamily: 'monospace',
+                color: accentAmber,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          ..._hookStates.entries.map((entry) {
+            return Card(
+              color: cardColor,
+              shape: const RoundedRectangleBorder(
+                side: BorderSide(color: dividerColor, width: 1.0),
+                borderRadius: BorderRadius.all(Radius.circular(4.0)),
+              ),
+              margin: const EdgeInsets.only(bottom: 12.0),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                leading: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: entry.value ? accentAmber : Colors.transparent,
+                    border: Border.all(
+                      color: entry.value ? accentAmber : secondaryTextColor,
+                      width: 2,
+                    ),
+                    boxShadow: entry.value
+                        ? [
+                            BoxShadow(
+                              color: accentAmber.withOpacity(0.4),
+                              blurRadius: 4,
+                              spreadRadius: 1,
+                            )
+                          ]
+                        : null,
+                  ),
+                ),
+                title: Text(
+                  entry.key,
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: primaryTextColor),
+                ),
+                subtitle: Text(
+                  entry.value ? 'Hook Active' : 'Hook Disabled',
+                  style: const TextStyle(fontFamily: 'monospace', color: secondaryTextColor, fontSize: 12),
+                ),
+                onTap: () {
+                  setState(() {
+                    _hookStates[entry.key] = !entry.value;
+                  });
+                },
+              ),
+            );
+          }),
+          const SizedBox(height: 24),
+          const Center(
+            child: Text(
+              'Battery-Rock System Settings',
+              style: TextStyle(
+                color: secondaryTextColor,
+                fontSize: 12,
+              ),
+            ),
+          )
+        ],
       ),
     );
   }
