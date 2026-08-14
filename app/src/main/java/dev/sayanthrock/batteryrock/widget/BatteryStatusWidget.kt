@@ -56,7 +56,7 @@ class BatteryStatusWidget : GlanceAppWidget() {
                         )
                         Spacer(modifier = GlanceModifier.width(16.dp))
                         Image(
-                            provider = ImageProvider(R.drawable.ic_lightning),
+                            provider = ImageProvider(R.drawable.ic_stat_bolt),
                             contentDescription = "Charging",
                             modifier = GlanceModifier.size(24.dp)
                         )

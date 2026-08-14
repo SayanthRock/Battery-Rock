@@ -54,7 +54,7 @@ class MinimalBatteryWidget : GlanceAppWidget() {
                         )
                         Spacer(modifier = GlanceModifier.width(8.dp))
                         Image(
-                            provider = ImageProvider(R.drawable.ic_lightning),
+                            provider = ImageProvider(R.drawable.ic_stat_bolt),
                             contentDescription = "Charging",
                             modifier = GlanceModifier.size(16.dp)
                         )
