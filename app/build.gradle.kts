@@ -66,6 +66,7 @@ kotlin {
 }
 
 dependencies {
+    implementation("com.google.code.gson:gson:2.10.1")
     compileOnly(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
     implementation(libs.androidx.core.ktx)
