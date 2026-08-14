@@ -3,7 +3,6 @@ package dev.sayanthrock.batteryrock
 import android.Manifest
 import android.app.AppOpsManager
 import android.content.Context
-import android.app.AlarmManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -19,8 +18,7 @@ enum class AppPermission(val title: String, val description: String, val isRequi
     BATTERY_OPTIMIZATION("Battery optimization", "Required for reliable background monitoring", true),
     USAGE_ACCESS("Usage access", "Required for app activity monitoring", false),
     FOREGROUND_SERVICE("Foreground service", "Required to keep monitoring active", true),
-    BLUETOOTH("Bluetooth", "Required for connected device monitoring", false),
-    ALARMS_REMINDERS("Alarms & reminders", "Allow Battery Rock to set alarms and schedule time-sensitive actions. This lets the app run in the background, which may use more battery.\n\nIf this permission is off, existing alarms and time-based events scheduled by Battery Rock won't work.", true)
+    BLUETOOTH("Bluetooth", "Required for connected device monitoring", false)
 }
 
 object PermissionManager {
@@ -55,14 +53,6 @@ object PermissionManager {
                     true // Needs to be handled more specifically if strictly needed, but simplifies for now
                 }
             }
-            AppPermission.ALARMS_REMINDERS -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-                    alarmManager.canScheduleExactAlarms()
-                } else {
-                    true
-                }
-            }
         }
     }
 
@@ -92,15 +82,6 @@ object PermissionManager {
             AppPermission.FOREGROUND_SERVICE, AppPermission.BLUETOOTH -> {
                  Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                     data = Uri.parse("package:${context.packageName}")
-                }
-            }
-            AppPermission.ALARMS_REMINDERS -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                        data = Uri.parse("package:${context.packageName}")
-                    }
-                } else {
-                    null
                 }
             }
         }
