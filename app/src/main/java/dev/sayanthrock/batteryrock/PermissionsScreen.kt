@@ -46,7 +46,7 @@ fun PermissionsScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(ScreenBackground, Color(0xFF0B1020))))
+                .background(Brush.verticalGradient(listOf(ScreenBackground, Color(0xFFE8EAE2))))
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 24.dp)
