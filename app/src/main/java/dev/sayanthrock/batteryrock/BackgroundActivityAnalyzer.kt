@@ -5,6 +5,7 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Process
+import android.graphics.drawable.Drawable
 import java.util.Calendar
 
 data class AppUsageInfo(
@@ -12,7 +13,7 @@ data class AppUsageInfo(
     val appName: String,
     val totalTimeInForeground: Long,
     val batteryImpact: BatteryImpact,
-    val iconId: Int = 0 // Placeholder
+    val icon: Drawable? = null
 )
 
 enum class BatteryImpact(val label: String) {
@@ -66,11 +67,18 @@ object BackgroundActivityAnalyzer {
                 else -> BatteryImpact.LOW
             }
 
+            val icon = try {
+                pm.getApplicationIcon(packageName)
+            } catch (e: PackageManager.NameNotFoundException) {
+                null
+            }
+
             AppUsageInfo(
                 packageName = packageName,
                 appName = appName,
                 totalTimeInForeground = stats.totalTimeInForeground,
-                batteryImpact = impact
+                batteryImpact = impact,
+                icon = icon
             )
         }.sortedByDescending { it.totalTimeInForeground }
     }
