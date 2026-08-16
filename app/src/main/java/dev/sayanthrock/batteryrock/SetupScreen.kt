@@ -27,6 +27,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.DataOutputStream
+
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -111,8 +117,11 @@ fun PermissionsStep(onFinish: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var refreshTrigger by remember { mutableIntStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
+    var isGrantingRoot by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
+
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 refreshTrigger++
@@ -167,9 +176,56 @@ fun PermissionsStep(onFinish: () -> Unit) {
                 color = Color.Gray
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (isGrantingRoot) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFF1B6A20))
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text("Executing root commands...", color = Color.Gray, fontSize = 14.sp)
+                }
+            } else {
+                Button(
+                    onClick = {
+                        isGrantingRoot = true
+                        coroutineScope.launch(Dispatchers.IO) {
+                            try {
+                                val process = Runtime.getRuntime().exec("su")
+                                val os = DataOutputStream(process.outputStream)
+                                val pkg = context.packageName
+
+                                os.writeBytes("pm grant $pkg android.permission.POST_NOTIFICATIONS\n")
+                                os.writeBytes("appops set $pkg android:get_usage_stats allow\n")
+                                os.writeBytes("appops set $pkg android:schedule_exact_alarm allow\n")
+                                os.writeBytes("dumpsys deviceidle whitelist +$pkg\n")
+
+                                os.writeBytes("exit\n")
+                                os.flush()
+                                process.waitFor()
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                            withContext(Dispatchers.Main) {
+                                isGrantingRoot = false
+                                refreshTrigger++
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF000000)),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Text("Grant All Automatically via Root", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Column(
+
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState()),

@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -122,6 +123,7 @@ fun BatteryRockApp() {
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable("setup") { SetupWizardScreen(navController) }
+        composable("settings") { SettingsScreen(navController) }
         composable("home") { HomeScreen(navController, viewModel) }
 
 
@@ -153,6 +155,19 @@ fun HomeScreen(navController: NavController, viewModel: BatteryViewModel) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(onClick = { navController.navigate("settings") }) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = PrimaryText
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             BatteryRing(state = state)
             Spacer(modifier = Modifier.height(8.dp))
