@@ -7,8 +7,8 @@ import android.net.Uri
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.IconButton
 
 import androidx.compose.animation.animateColorAsState
@@ -59,11 +59,16 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.Canvas
 
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.ui.unit.dp
@@ -78,14 +83,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 
 
-val ScreenBackground = Color(0xFFF6F8F2)
-val CardBackground = Color(0xFFF0F3EB)
-val CardBorder = Color(0xFFE3E5DF)
-val PrimaryText = Color(0xFF1E1E1E)
-val SecondaryText = Color(0xFF5E605C)
+val ScreenBackground = Color(0xFF131511)
+val CardBackground = Color(0xFF1B1C1A)
+val CardBorder = Color(0xFF2E2E2E)
+val PrimaryText = Color(0xFFE2E3DF)
+val SecondaryText = Color(0xFFA6A6A6)
 val MutedText = Color(0xFF757773)
-val AccentAmber = Color(0xFF7F6710)
-val AccentCyan = Color(0xFF1B6A20)
+val AccentAmber = Color(0xFFB18F42)
+val AccentCyan = Color(0xFF98D196) // The green from the image
 val AlertRed = Color(0xFFD32F2F)
 
 @Composable
@@ -130,121 +135,138 @@ fun HomeScreen(navController: NavController, viewModel: BatteryViewModel) {
                 .background(ScreenBackground)
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 24.dp)
+                .padding(horizontal = 16.dp, vertical = 24.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            BatteryHeader(state)
-            BatteryWaveform()
-            BatteryPercentCard(state)
-            DetailGrid(state)
-
-            if (state.isCharging) {
-                ChargingPredictionCard(state)
-            } else {
-                DrainPredictionCard(state)
-            }
-
-            BackgroundActivityCard(onClick = { navController.navigate("background_activity") })
-
-            FooterNote()
+            Spacer(modifier = Modifier.height(16.dp))
+            BatteryRing(state = state)
+            Spacer(modifier = Modifier.height(8.dp))
+            MonitoringButton()
+            Spacer(modifier = Modifier.height(8.dp))
+            DetailGrid(state = state)
+            Spacer(modifier = Modifier.height(8.dp))
+            DeviceProfileCard(state = state)
         }
     }
 }
 
 @Composable
-private fun BatteryWaveform() {
+fun BatteryRing(state: BatteryUiState) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp)
+            .aspectRatio(1.2f)
+    ) {
+        val percentage = state.percentageDecimal
+        val sweepAngle = (percentage / 100f) * 260f
+
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidth = 16.dp.toPx()
+
+            // Background arc
+            drawArc(
+                color = Color(0xFF262A22),
+                startAngle = 140f,
+                sweepAngle = 260f,
+                useCenter = false,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+
+            // Foreground arc
+            drawArc(
+                color = AccentCyan,
+                startAngle = 140f,
+                sweepAngle = sweepAngle,
+                useCenter = false,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+        }
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = String.format(Locale.US, "%.2f", state.percentageDecimal),
+                    color = PrimaryText,
+                    fontSize = 56.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "%",
+                    color = PrimaryText,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+                )
+            }
+            Text(
+                text = state.status.uppercase(),
+                color = SecondaryText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .background(Color(0xFF262E25), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .border(1.dp, Color(0xFF3B473A), RoundedCornerShape(16.dp))
+            ) {
+                val sign = if (state.wattageMw > 0) "+" else ""
+                Text(
+                    text = "$sign${state.wattageMw} mW",
+                    color = AccentCyan,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MonitoringButton() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(60.dp)
-            .background(CardBackground, RoundedCornerShape(16.dp))
-            .border(1.dp, CardBorder, RoundedCornerShape(16.dp))
-            .padding(vertical = 8.dp),
+            .height(64.dp)
+            .background(AccentCyan, RoundedCornerShape(16.dp))
+            .clickable { /* Toggle Monitoring */ },
         contentAlignment = Alignment.Center
     ) {
-        // Simple faux waveform for the "Diagnostic Console" look
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(40) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 2.dp, height = (10..40).random().dp)
-                        .background(AccentCyan.copy(alpha = 0.5f))
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun BatteryHeader(state: BatteryUiState) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // A simple plug/monitoring icon
+            Text(text = "⚡", fontSize = 18.sp, color = Color(0xFF131511))
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Battery-Rock",
-                color = PrimaryText,
-                fontSize = 28.sp,
+                text = "Turn on monitoring",
+                color = Color(0xFF131511),
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = "Modern battery monitor",
-                color = SecondaryText,
-                fontSize = 13.sp
-            )
         }
-        ChargingIndicator(isCharging = state.isCharging)
     }
 }
 
 @Composable
-private fun BatteryPercentCard(state: BatteryUiState) {
-    val statusColor by animateColorAsState(
-        targetValue = when (state.status) {
-            "Charging", "Full" -> AccentCyan
-            "Discharging" -> AccentAmber
-            else -> AccentCyan
-        },
-        label = "statusColor"
-    )
+fun SimpleWaveGraph(modifier: Modifier, color: Color) {
+    Canvas(modifier = modifier) {
+        val path = Path()
+        val width = size.width
+        val height = size.height
 
-    BatteryCard {
-        Text(
-            text = "${state.percentage}%",
-            color = AccentAmber, fontFamily = FontFamily.Monospace,
-            fontSize = 72.sp,
-            fontWeight = FontWeight.ExtraBold,
-            lineHeight = 76.sp
-        )
-        Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = if (state.isCharging) "⚡ ${state.status}" else state.status,
-                color = statusColor,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            if (state.isCharging && state.wattage != "Unknown") {
-                Text(
-                    text = " · ${state.wattage}",
-                    color = PrimaryText,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = "Health: ${state.health}",
-            color = SecondaryText,
-            fontSize = 13.sp
+        path.moveTo(0f, height * 0.7f)
+        path.cubicTo(width * 0.2f, height * 0.8f, width * 0.3f, height * 0.4f, width * 0.5f, height * 0.5f)
+        path.cubicTo(width * 0.7f, height * 0.6f, width * 0.8f, height * 0.3f, width, height * 0.4f)
+
+        drawPath(
+            path = path,
+            color = color.copy(alpha = 0.5f),
+            style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
         )
     }
 }
@@ -253,192 +275,175 @@ private fun BatteryPercentCard(state: BatteryUiState) {
 private fun DetailGrid(state: BatteryUiState) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Health", state.health, Modifier.weight(1f))
-            StatCard("Level", "${state.percentage}%", Modifier.weight(1f))
+            StatCard("VOLTAGE", state.voltage, Modifier.weight(1f), icon = "⚡")
+
+            // Current Card with Wave
+            Card(
+                modifier = Modifier.weight(1f).height(90.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardBackground),
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    SimpleWaveGraph(Modifier.fillMaxSize(), AccentCyan)
+                    Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("〰", color = SecondaryText, fontSize = 14.sp)
+                            Text("CURRENT", color = SecondaryText, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            val sign = if (state.currentMa > 0) "+" else ""
+                            Text(
+                                text = "$sign${String.format(Locale.US, "%.0f", state.currentMa)} mA",
+                                color = AccentCyan,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text("›", color = SecondaryText, fontSize = 20.sp)
+                        }
+                    }
+                }
+            }
         }
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Power Source", state.powerSource, Modifier.weight(1f))
-            StatCard("Status", state.status, Modifier.weight(1f))
+            // Wattage Card with Wave
+            Card(
+                modifier = Modifier.weight(1f).height(90.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardBackground),
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    SimpleWaveGraph(Modifier.fillMaxSize(), AccentCyan)
+                    Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("🔋", color = SecondaryText, fontSize = 12.sp)
+                            Text("WATTAGE", color = SecondaryText, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            val sign = if (state.wattageW > 0) "+" else ""
+                            Text(
+                                text = "$sign${String.format(Locale.US, "%.1f", state.wattageW)} W",
+                                color = AccentCyan,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text("›", color = SecondaryText, fontSize = 20.sp)
+                        }
+                    }
+                }
+            }
+
+            StatCard("TEMPERATURE", state.temperature, Modifier.weight(1f), icon = "🌡")
         }
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Technology", state.technology, Modifier.weight(1f))
-            StatCard("Temperature", state.temperature, Modifier.weight(1f))
+            StatCard("HEALTH", state.health, Modifier.weight(1f), icon = "♥", valueColor = AccentCyan)
+            StatCard("PLUGGED", state.powerSource, Modifier.weight(1f), icon = "🔌")
         }
+
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCard("Voltage", state.voltage, Modifier.weight(1f))
-            StatCard("Current", state.current, Modifier.weight(1f))
+            StatCard("MAX CAPACITY", state.maxCapacity, Modifier.weight(1f), icon = "🔋")
+            StatCard("CHARGE STATUS", state.status, Modifier.weight(1f), icon = "📈", valueColor = AccentCyan)
         }
     }
 }
 
 @Composable
-private fun ChargingPredictionCard(state: BatteryUiState) {
+private fun StatCard(label: String, value: String, modifier: Modifier = Modifier, icon: String = "", valueColor: Color = PrimaryText) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.height(90.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
-        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "CHARGING PREDICTION",
-                color = AccentCyan,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = state.timeToFullStr,
-                color = PrimaryText,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-}
-
-@Composable
-private fun DrainPredictionCard(state: BatteryUiState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
-        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "🔋 NEED TO CHARGE SOON",
-                color = AccentAmber,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Estimated remaining time:",
-                color = SecondaryText,
-                fontSize = 14.sp
-            )
-            Text(
-                text = state.timeToEmptyStr,
-                color = PrimaryText,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-}
-
-@Composable
-private fun BackgroundActivityCard(onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
-        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
+        Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(icon, color = SecondaryText, fontSize = 14.sp)
                 Text(
-                    text = "App Breakdown",
-                    color = AccentAmber,
-                    fontSize = 14.sp,
+                    text = label.uppercase(),
+                    color = SecondaryText,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = value,
+                    color = valueColor,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    text = "Tap to view detailed app battery impact",
-                    color = SecondaryText,
-                    fontSize = 13.sp
-                )
+                Text("›", color = SecondaryText, fontSize = 20.sp)
             }
         }
     }
 }
 
 @Composable
-private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
+fun DeviceProfileCard(state: BatteryUiState) {
     Card(
-        modifier = modifier,
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
-        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "DEVICE PROFILE",
+                    color = SecondaryText,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Text("📱", fontSize = 16.sp)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = label.uppercase(),
-                color = MutedText,
-                fontSize = 10.sp,
+                text = state.model.uppercase(),
+                color = PrimaryText,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = value,
-                color = PrimaryText,
-                fontSize = 16.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.SemiBold
-            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "MANUFACTURER",
+                        color = SecondaryText,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = state.manufacturer,
+                        color = PrimaryText,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "BOARD",
+                        color = SecondaryText,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = state.board,
+                        color = PrimaryText,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
     }
-}
-
-@Composable
-private fun BatteryCard(content: @Composable () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(CardBackground, RoundedCornerShape(16.dp))
-            .border(1.dp, CardBorder, RoundedCornerShape(16.dp))
-            .padding(24.dp),
-        horizontalAlignment = Alignment.Start,
-        content = { content() }
-    )
-}
-
-@Composable
-private fun ChargingIndicator(isCharging: Boolean) {
-    val transition = rememberInfiniteTransition(label = "chargePulse")
-    val pulse by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = if (isCharging) 1.16f else 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseScale"
-    )
-
-    Box(
-        modifier = Modifier
-            .scale(pulse)
-            .shadow(elevation = if (isCharging) 12.dp else 0.dp, spotColor = AccentCyan, shape = CircleShape)
-            .size(42.dp)
-            .background(if (isCharging) AccentCyan.copy(alpha = 0.18f) else Color(0x0FFFFFFF), CircleShape)
-            .border(1.dp, if (isCharging) AccentCyan else CardBorder, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = if (isCharging) "⚡" else "•",
-            color = if (isCharging) AccentCyan else SecondaryText,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-private fun FooterNote() {
-    Text(
-        text = "Live data from Android battery broadcast · No extra sensors required",
-        color = MutedText,
-        fontSize = 11.sp,
-        modifier = Modifier.padding(top = 4.dp)
-    )
 }
 
 @Composable
@@ -675,7 +680,7 @@ fun AppDetailsScreen(navController: NavController, packageName: String) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 IconButton(onClick = { navController.popBackStack() }, modifier = Modifier.size(32.dp)) {
-                    Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = PrimaryText)
+                    Icon(imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryText)
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
@@ -834,7 +839,7 @@ fun AppDetailsScreen(navController: NavController, packageName: String) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Open app info", color = PrimaryText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = "Open", tint = SecondaryText)
+                        Icon(imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Open", tint = SecondaryText)
                     }
                 }
             }

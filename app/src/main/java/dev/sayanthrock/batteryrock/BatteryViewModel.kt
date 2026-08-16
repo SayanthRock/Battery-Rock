@@ -88,17 +88,25 @@ class BatteryViewModel : ViewModel() {
 
 data class BatteryUiState(
     val percentage: Int = 0,
+    val percentageDecimal: Float = 0f,
     val status: String = "Unknown",
     val health: String = "Unknown",
     val temperature: String = "Unknown",
     val technology: String = "Unknown",
     val voltage: String = "Unknown",
     val current: String = "Unknown",
+    val currentMa: Float = 0f,
     val wattage: String = "Unknown",
+    val wattageW: Float = 0f,
+    val wattageMw: Int = 0,
     val powerSource: String = "Unknown",
     val isCharging: Boolean = false,
     val timeToFullStr: String = "Calculating...",
-    val timeToEmptyStr: String = "Calculating..."
+    val timeToEmptyStr: String = "Calculating...",
+    val maxCapacity: String = "Unknown",
+    val model: String = Build.MODEL,
+    val manufacturer: String = Build.MANUFACTURER,
+    val board: String = Build.BOARD
 )
 
 private fun Intent.toBatteryUiState(context: Context): BatteryUiState {
@@ -120,11 +128,13 @@ private fun Intent.toBatteryUiState(context: Context): BatteryUiState {
     val currentUa = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
 
     val currentMa = if (currentUa != Int.MIN_VALUE) currentUa / 1000f else 0f
-    val currentStr = if (currentUa != Int.MIN_VALUE) "${String.format("%.0f", currentMa)} mA" else "Unknown"
+    val currentStr = if (currentUa != Int.MIN_VALUE) "${if(currentMa > 0) "+" else ""}${String.format(java.util.Locale.US, "%.0f", currentMa)} mA" else "Unknown"
 
     val voltageV = if (voltageMv > 0) voltageMv / 1000f else 0f
     val wattageValue = if (voltageV > 0 && currentMa != 0f) Math.abs(voltageV * (currentMa / 1000f)) else 0f
-    val wattageStr = if (wattageValue > 0f) String.format("%.1f W", wattageValue) else "Unknown"
+    val wattageW = if (voltageV > 0 && currentMa != 0f) voltageV * (currentMa / 1000f) else 0f
+    val wattageMw = (wattageW * 1000).roundToInt()
+    val wattageStr = if (wattageValue > 0f) String.format(java.util.Locale.US, "%.1f W", wattageValue) else "Unknown"
 
     val isCharging = statusCode == BatteryManager.BATTERY_STATUS_CHARGING || statusCode == BatteryManager.BATTERY_STATUS_FULL
 
@@ -159,19 +169,32 @@ private fun Intent.toBatteryUiState(context: Context): BatteryUiState {
         }
     }
 
+    var percentageDecimal = percentage.toFloat()
+    if (chargeCounterUaH > 0 && totalCapacityMah > 0) {
+        val estimatedPercentage = ((chargeCounterUaH / 1000f) / totalCapacityMah) * 100f
+        if (estimatedPercentage in 0f..100f) {
+            percentageDecimal = estimatedPercentage
+        }
+    }
+
     return BatteryUiState(
         percentage = percentage,
+        percentageDecimal = percentageDecimal,
         status = statusCode.toBatteryStatus(),
         health = healthCode.toBatteryHealth(),
-        temperature = if (tempRaw != Int.MIN_VALUE) String.format("%.1f°C", tempRaw / 10f) else "Unknown",
+        temperature = if (tempRaw != Int.MIN_VALUE) String.format(java.util.Locale.US, "%.1f°C", tempRaw / 10f) else "Unknown",
         technology = getStringExtra(BatteryManager.EXTRA_TECHNOLOGY)?.takeIf { it.isNotBlank() } ?: "Unknown",
         voltage = if (voltageMv > 0) "${voltageMv} mV" else "Unknown",
         current = currentStr,
+        currentMa = currentMa,
         wattage = wattageStr,
+        wattageW = wattageW,
+        wattageMw = wattageMw,
         powerSource = pluggedCode.toPowerSource(),
         isCharging = isCharging,
         timeToFullStr = timeToFull,
-        timeToEmptyStr = timeToEmpty
+        timeToEmptyStr = timeToEmpty,
+        maxCapacity = "${totalCapacityMah.roundToInt()} mAh"
     )
 }
 
