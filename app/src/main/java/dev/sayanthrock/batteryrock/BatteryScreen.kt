@@ -254,6 +254,14 @@ private fun DetailGrid(state: BatteryUiState) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatCard("Health", state.health, Modifier.weight(1f))
+            StatCard("Level", "${state.percentage}%", Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatCard("Power Source", state.powerSource, Modifier.weight(1f))
+            StatCard("Status", state.status, Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StatCard("Technology", state.technology, Modifier.weight(1f))
             StatCard("Temperature", state.temperature, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

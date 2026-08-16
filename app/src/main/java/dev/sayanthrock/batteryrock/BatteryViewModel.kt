@@ -95,6 +95,7 @@ data class BatteryUiState(
     val voltage: String = "Unknown",
     val current: String = "Unknown",
     val wattage: String = "Unknown",
+    val powerSource: String = "Unknown",
     val isCharging: Boolean = false,
     val timeToFullStr: String = "Calculating...",
     val timeToEmptyStr: String = "Calculating..."
@@ -113,6 +114,7 @@ private fun Intent.toBatteryUiState(context: Context): BatteryUiState {
     val healthCode = getIntExtra(BatteryManager.EXTRA_HEALTH, BatteryManager.BATTERY_HEALTH_UNKNOWN)
     val tempRaw = getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
     val voltageMv = getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1)
+    val pluggedCode = getIntExtra(BatteryManager.EXTRA_PLUGGED, -1)
 
     val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
     val currentUa = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
@@ -166,6 +168,7 @@ private fun Intent.toBatteryUiState(context: Context): BatteryUiState {
         voltage = if (voltageMv > 0) "${voltageMv} mV" else "Unknown",
         current = currentStr,
         wattage = wattageStr,
+        powerSource = pluggedCode.toPowerSource(),
         isCharging = isCharging,
         timeToFullStr = timeToFull,
         timeToEmptyStr = timeToEmpty
@@ -187,5 +190,13 @@ private fun Int.toBatteryHealth(): String = when (this) {
     BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "Over voltage"
     BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> "Failure"
     BatteryManager.BATTERY_HEALTH_COLD -> "Cold"
+    else -> "Unknown"
+}
+
+private fun Int.toPowerSource(): String = when (this) {
+    BatteryManager.BATTERY_PLUGGED_AC -> "AC Charger"
+    BatteryManager.BATTERY_PLUGGED_USB -> "USB"
+    BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless"
+    0 -> "Battery"
     else -> "Unknown"
 }
