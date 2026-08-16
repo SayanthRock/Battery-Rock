@@ -1,6 +1,7 @@
 package dev.sayanthrock.batteryrock
 
 import android.content.Intent
+import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.Settings
 import android.net.Uri
@@ -111,8 +112,20 @@ fun BatteryRockApp() {
         onDispose { viewModel.stop(context) }
     }
 
-    NavHost(navController = navController, startDestination = "home") {
+
+    val sharedPreferences = context.getSharedPreferences("battery_rock_prefs", Context.MODE_PRIVATE)
+    val isSetupComplete = sharedPreferences.getBoolean("setup_complete", false)
+
+    val allGranted = AppPermission.values().all { PermissionManager.checkPermission(context, it) } && BatteryRockStatus.isModuleActive()
+
+    val startDestination = if (isSetupComplete && allGranted) "home" else "setup"
+
+    NavHost(navController = navController, startDestination = startDestination) {
+        composable("setup") { SetupWizardScreen(navController) }
         composable("home") { HomeScreen(navController, viewModel) }
+
+
+
         composable("background_activity") { BackgroundActivityScreen(navController) }
         composable("permissions") { PermissionsScreen(navController) }
         composable("app_details/{packageName}") { backStackEntry ->
